@@ -40,29 +40,35 @@ require 'awesome_print'
 require 'uri'
 
 
-class Msg
+module Msg
 
-	def Msg.debug(arg)
+	def msg_debug(arg)
 		#puts arg.to_s.white + 10.chr
 	end
 
-	def Msg.info(arg)
+	def msg_info(arg)
 		puts arg.to_s + 10.chr
 	end
 
-	def Msg.error(arg)
-		puts ("ОШИБКА: " + arg.to_s).red + 10.chr
+	def msg_error(arg)
+		arg = arg.to_s
+		puts ("ОШИБКА: " + arg).red + 10.chr
+		File.open(@error_log,'w') if not File.exists?(@error_log)
+		File.open(@error_log,'a') { |file| file.write(arg+10.chr) }
 	end
 	
-	def Msg.alert(arg)
-		puts ("###: " + arg.to_s).yellow + 10.chr
+	def msg_alert(arg)
+		arg = arg.to_s
+		puts ("###: " + arg).yellow + 10.chr
+		File.open(@alert_log,'w') if not File.exists?(@alert_log)
+		File.open(@alert_log,'a') { |file| file.write(arg+10.chr) }
 	end
 	
-	def Msg.info_blue(arg)
+	def msg_info_blue(arg)
 		puts arg.to_s.blue + 10.chr
 	end
 	
-	def Msg.info_green(arg)
+	def msg_info_green(arg)
 		puts arg.to_s.green + 10.chr
 	end
 end
@@ -76,6 +82,8 @@ end
 
 class Book
 
+	include Msg
+
 	attr_accessor :title, :author
 	
 	# методы первого уровня
@@ -83,7 +91,8 @@ class Book
 
 	# настроить
 	def initialize(title,options={})
-		Msg.info "#{__method__}('#{title}','#{author}')"
+
+		msg_info "#{__method__}('#{title}','#{author}')"
 		
 		@user_agent = 'Ruby/1.9.3, Contacts: aakumykov@yandex.ru'
 
@@ -95,7 +104,7 @@ class Book
 		@@script_name = File.basename(File.realpath(__FILE__)).split('.')[0]
 		@work_dir = Dir.tmpdir + '/' + @@script_name
 		Dir.mkdir(@work_dir) if not Dir.exists?(@work_dir)
-		Msg.debug("work_dir: #{@work_dir}")
+		msg_debug("work_dir: #{@work_dir}")
 
 		@book_dir = @work_dir + '/' + self.title.gsub(/\s/,'_')
 		Dir.mkdir(@book_dir) if not Dir.exists?(@book_dir)
@@ -104,8 +113,11 @@ class Book
 		Dir.new(@book_dir).each { |item| File.delete "#{@book_dir}/#{item}" if item.match(/\.html/) }
 		
 		# журнал ошибок
-		@@error_log = "#{@@script_name}-errors.log"
-		File.open(@@error_log,'w') { |file| true }
+		@error_log = "errors-#{@@script_name}.log"
+		@alert_log = "alerts-#{@@script_name}.log"
+		
+		File.delete(@error_log) if File.exists?(@error_log)
+		File.delete(@alert_log) if File.exists?(@alert_log)
 		
 		# рабочие параметры
 		@threads = 1
@@ -165,12 +177,10 @@ class Book
 		
 		q = table_def.join(' ')
 		@db.execute(q)
-		
-		#system "ls -l #{@db_name}"
 	end
 
 	def addSource(uri)
-		Msg.info "#{__method__}(#{uri})"
+		msg_info "#{__method__}(#{uri})"
 				
 		link = URI::encode(uri) if not uri.urlencoded?
 		link = URI(link)
@@ -188,7 +198,7 @@ class Book
 	end
 	
 	def addFilter(filter)
-		Msg.info "#{__method__}(#{filter.keys})"
+		msg_info "#{__method__}(#{filter.keys})"
 		
 		@filters.merge!(filter)
 		
@@ -197,12 +207,12 @@ class Book
 
 	def prepare()
 		
-		Msg.info "#{__method__}()"
+		msg_info "#{__method__}()"
 		
 		# пока не будет готово
 		while ( not prepareComplete? and freshLinksExists?(@current_depth) ) do
 				
-			Msg.debug "CURRENT: pages #{@page_count}, depth #{@current_depth}"
+			msg_debug "CURRENT: pages #{@page_count}, depth #{@current_depth}"
 			
 			# брать порцию ссылок
 			links = getFreshLinks(@current_depth, @threads)
@@ -218,14 +228,14 @@ class Book
 				# зарядить нить обработки
 				threads << Thread.new(source_uri) { |uri|
 				
-					Msg.info ""
+					msg_info ""
 
 					# получишь страницу
 					source_page = loadPage(uri)
 					
 					# выделишь заголовок
 					page_title = extractTitle(source_page)
-					Msg.info_green "заголовок: #{page_title}"
+					msg_info_green "заголовок: #{page_title}"
 					
 					# обрежешь и сохранишь страницу
 					page_body = extractBody(source_page,source_uri)
@@ -269,7 +279,7 @@ class Book
 	end
 	
 	def create(file='')
-		Msg.info "#{__method__}(#{file})"
+		msg_info "#{__method__}(#{file})"
 	end
 
 
@@ -292,35 +302,35 @@ class Book
 			return false
 		end
 
-		Msg.info ""
-		Msg.info_blue "===== #{reason} ====="
+		msg_info ""
+		msg_info_blue "===== #{reason} ====="
 		return true
 	end
 
 	def freshLinksExists?(depth)
-		#Msg.debug "#{__method__}(#{depth})"
+		#msg_debug "#{__method__}(#{depth})"
 		
 		q = "SELECT * FROM #{@table_name} WHERE depth='#{depth}' AND status='fresh'"
 		res = @db.execute(q)
 		res = res.count != 0
 		
-		#Msg.debug  "#{__method__}(depth #{depth}) ==> #{res}"
+		#msg_debug  "#{__method__}(depth #{depth}) ==> #{res}"
 		
 		return res
 	end
 
 	def getFreshLinks ( depth, amount )
-		Msg.debug "#{__method__}(#{depth},#{amount})"
+		msg_debug "#{__method__}(#{depth},#{amount})"
 		q = "SELECT * FROM #{@table_name} WHERE status='fresh' AND depth=#{depth} LIMIT #{amount}"
 		res = @db.execute(q)
 		
-		res.each { |row| Msg.debug "#{row['uri']}" }
+		res.each { |row| msg_debug "#{row['uri']}" }
 		
 		return res
 	end
 	
 	def loadPage(uri)
-		Msg.info_blue "#{__method__}('#{uri.urlencoded? ? URI::decode(uri) : uri}')"
+		msg_info_blue "#{__method__}('#{uri.urlencoded? ? URI::decode(uri) : uri}')"
 		
 		curl = CURL.new
 		curl.user_agent = @user_agent
@@ -330,7 +340,7 @@ class Book
 	end
 	
 	def extractLinks(html_data,uri,filter='')
-		Msg.debug "#{__method__} from page '#{uri}'"
+		msg_debug "#{__method__} from page '#{uri}'"
 		
 		links = collectLinks(uri,html_data)
 		#puts "collected: #{links.size}"
@@ -344,8 +354,8 @@ class Book
 	end
 	
 	def saveLink(id, parent_id, depth, uri)
-		#Msg.info "#{__method__}(#{id}, #{parent_id}, #{depth}, #{uri})"
-		#Msg.info "#{__method__}(#{uri})"
+		#msg_info "#{__method__}(#{id}, #{parent_id}, #{depth}, #{uri})"
+		#msg_info "#{__method__}(#{uri})"
 		
 		uri = URI::encode(uri) if not uri.urlencoded?
 		
@@ -373,8 +383,8 @@ class Book
 				uri
 			)
 		rescue
-			Msg.error "|#{q}|"
-			File.open(@@error_log,'a') { |file|
+			msg_error "|#{q}|"
+			File.open(@error_log,'a') { |file|
 				file.write(q)
 			}
 		end
@@ -387,7 +397,7 @@ class Book
 		
 		file_name = @book_dir+"/"+arg[:id]+".html"
 		
-		Msg.info "#{__method__}('#{title}', '#{file_name}'), body size: #{page_body.size}"
+		msg_info "#{__method__}('#{title}', '#{file_name}'), body size: #{page_body.size}"
 
 		File.open(file_name,'w') { |file|
 			file.write <<QWERTY
@@ -407,7 +417,7 @@ QWERTY
 	end
 	
 	def setLinkStatus(id,options)
-		Msg.info "#{__method__}(), #{id}, #{options}"
+		msg_info "#{__method__}(), #{id}, #{options}"
 		q = "UPDATE #{@table_name} SET status='#{options[:status]}' WHERE id='#{id}'"
 		@db.execute(q)
 	end
@@ -415,7 +425,7 @@ QWERTY
 	
 	# методы второго уровня
 	def getOptions(id)
-		Msg.debug "#{__method__}(#{id})"
+		msg_debug "#{__method__}(#{id})"
 		
 		if @options.has_key?(id) then
 			return @options[id]
@@ -425,13 +435,13 @@ QWERTY
 	end
 
 	def getFilterFor(uri,mode)
-		Msg.debug "#{__method__}(#{uri},'#{mode}')"
+		msg_debug "#{__method__}(#{uri},'#{mode}')"
 		
 		host = URI(uri).host
 		
 		case mode
 			when 'links'
-				Msg.debug "items in filter: #{@filters[host]['links'].size}"
+				msg_debug "items in filter: #{@filters[host]['links'].size}"
 				
 				return @filters[host]['links']
 
@@ -442,14 +452,14 @@ QWERTY
 				return '/'
 
 			else
-				Msg.error "неизвестный режим '#{mode}'"
+				msg_error "неизвестный режим '#{mode}'"
 				return nil
 		end
 	end
 
 
 	def collectLinks(uri,page)
-		Msg.info "#{__method__}(#{ URI::decode(uri) })"
+		msg_info "#{__method__}(#{ URI::decode(uri) })"
 
 		base_uri = URI(uri)
 
@@ -481,14 +491,14 @@ QWERTY
 			begin
 				item = URI::decode(item)
 			rescue
-				Msg.alert "кривая ссылка для urldecode: #{item_orig.encode()}"
+				msg_alert "кривая ссылка для urldecode: #{item_orig.encode()}"
 				next
 			end
 			
 			begin
 				item = URI::encode(item)
 			rescue
-				Msg.alert "кривая ссылка для urlencode: #{item_orig.encode()}"
+				msg_alert "кривая ссылка для urlencode: #{item_orig.encode()}"
 				next
 			end
 						
@@ -503,7 +513,7 @@ QWERTY
 			begin
 				uri = URI(item)
 			rescue
-				Msg.alert "кривая ссылка ВТОРОГО уровня: #{item.encode()}"
+				msg_alert "кривая ссылка ВТОРОГО уровня: #{item.encode()}"
 				next
 			end
 		
@@ -516,14 +526,14 @@ QWERTY
 		normalized_links.compact!
 		normalized_links.uniq!
 		
-		Msg.debug "raw #{all_links.count} / unique #{normalized_links.count}"
+		msg_debug "raw #{all_links.count} / unique #{normalized_links.count}"
 		#ap links
 		
 		return normalized_links
 	end
 
 	def filterLinks(links,filter)
-		Msg.debug "#{__method__}(input: #{links.size})"
+		msg_debug "#{__method__}(input: #{links.size})"
 
 		return links if filter.size == 0
 
@@ -545,7 +555,7 @@ QWERTY
 		}
 		
 		selected_links.uniq!
-		Msg.debug "#{__method__}(output: #{selected_links.size})"
+		msg_debug "#{__method__}(output: #{selected_links.size})"
 		#ap selected_links
 		
 		return selected_links
@@ -556,10 +566,10 @@ QWERTY
 
 	
 	def extractBody(html_data,uri)
-		Msg.debug "#{__method__}()"
+		msg_debug "#{__method__}()"
 		
 		filter = getFilterFor(uri,mode='page')
-		Msg.debug("page filter: #{filter}")
+		msg_debug("page filter: #{filter}")
 		
 		res = Nokogiri::HTML(html_data).xpath(filter).first.to_s
 		
@@ -567,7 +577,7 @@ QWERTY
 	end
 
 	def extractTitle(html_data)
-		Msg.debug("#{__method__}() from " + html_data.size.to_s + "-bytes html")
+		msg_debug("#{__method__}() from " + html_data.size.to_s + "-bytes html")
 		res = html_data.match(%r|<title[^>]*>(?<title>.*)<\s*/\s*title\s*>|im)
 		return '* нет заголовка *' if res.nil?
 		return res[:title].strip
@@ -619,5 +629,5 @@ start_time = Time.now
 book.prepare()
 book.create('test-book.epub')
 
-Msg.info ''
-Msg.info_blue "время выполнения: #{Time.now - start_time}"
+puts ''
+puts "время выполнения: #{Time.now - start_time}"
