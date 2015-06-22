@@ -236,8 +236,6 @@ class Book
 				
 				# зарядить нить обработки
 				threads << Thread.new(source_uri) { |uri|
-				
-					msg_info ""
 
 					# получишь страницу
 					source_page = loadPage(uri)
@@ -268,7 +266,7 @@ class Book
 						)
 					}
 					
-					setLinkStatus(source_id,{:status=>'processed'})
+					setLinkStatus(source_id,{:status=>'processed',:title=>page_title})
 					
 					@page_count += 1
 				}
@@ -277,6 +275,8 @@ class Book
 			# запустить обработку в нитях
 			threads.each { |thr| thr.join }
 		
+			displayStatus
+			
 			@current_depth += 1 if not freshLinksExists?(@current_depth)
 
 			if depthComplete?(@current_depth) then
@@ -286,15 +286,12 @@ class Book
 			
 			# пауза перед следующей порцией
 			if 1 != @threads then
-				msg_info_blue "==== страниц #{@page_count}===="
-				msg_info_blue "====  глубина #{@current_depth}===="
-				msg_info_blue "==== ошибок #{@errors_count}===="
-				msg_info_blue "==== предупреждений #{@alerts_count}===="
-
 				print "Ждём 5 секунд";
 				4.times { sleep 1 and print '.' };
 				sleep 1 and puts '.'
 			end
+			
+			puts ""
 		end		
 		
 	end
@@ -347,7 +344,7 @@ class Book
 	end
 
 	def depthComplete?(depth)
-		msg_info "#{__method__}()"
+		msg_debug "#{__method__}()"
 		
 		q = "SELECT  * FROM #{@table_name} WHERE depth=? AND status='processed' "
 		
@@ -454,9 +451,19 @@ QWERTY
 	end
 	
 	def setLinkStatus(id,options)
-		msg_info "#{__method__}(), #{id}, #{options}"
+		msg_info "#{__method__}(), #{options[:title]}, #{options[:status]}, #{id}"
+		
 		q = "UPDATE #{@table_name} SET status='#{options[:status]}' WHERE id='#{id}'"
-		@db.execute(q)
+		
+		# писать в БД до победного конца (что-то пошли дедлоки)
+		res = nil
+		until res.nil? do
+			begin
+				res = @db.prepare(q).execute()
+			rescue => e
+				msg_error e.message
+			end
+		end
 	end
 	
 	
@@ -618,6 +625,13 @@ QWERTY
 		res = html_data.match(%r|<title[^>]*>(?<title>.*)<\s*/\s*title\s*>|im)
 		return '* нет заголовка *' if res.nil?
 		return res[:title].strip
+	end
+
+	def displayStatus
+		msg_info_blue "====  глубина #{@current_depth}===="
+		msg_info_blue "==== страниц #{@page_count}===="
+		msg_info_blue "==== ошибок #{@errors_count}===="
+		msg_info_blue "==== предупреждений #{@alerts_count}===="
 	end
 
 end
