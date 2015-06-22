@@ -285,7 +285,16 @@ class Book
 			end
 			
 			# пауза перед следующей порцией
+<<<<<<< HEAD
 			if @threads > 5 then
+=======
+			if 1 != @threads then
+				msg_info_blue "==== страниц #{@page_count}===="
+				msg_info_blue "====  глубина #{@current_depth}===="
+				msg_info_blue "==== ошибок #{@errors_count}===="
+				msg_info_blue "==== предупреждений #{@alerts_count}===="
+
+>>>>>>> 84bc5db60098c04f7f1e9a058aeec9a486d40910
 				print "Ждём 5 секунд";
 				4.times { sleep 1 and print '.' };
 				sleep 1 and puts '.'
@@ -323,6 +332,14 @@ class Book
 			return false
 		end
 
+<<<<<<< HEAD
+=======
+		msg_info ""
+		msg_info_blue "===== #{reason} ====="
+		msg_info_blue "==== страниц #{@page_count}===="
+		msg_info_blue "==== текущая глубина #{@current_depth}===="
+		msg_info_blue "==== ошибок #{@errors_count}===="
+>>>>>>> 84bc5db60098c04f7f1e9a058aeec9a486d40910
 		return true
 	end
 
@@ -634,7 +651,11 @@ end
 
 book = Book.new('test book',{
 	:depth => 2,
+<<<<<<< HEAD
 	:threads => 25,
+=======
+	:threads => 10,
+>>>>>>> 84bc5db60098c04f7f1e9a058aeec9a486d40910
 	:db_type => 'memory'
 })
 
