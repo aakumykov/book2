@@ -132,7 +132,10 @@ class Book
 		
 		@page_count = 0 
 		@page_limit = 5		# 0 (zero) disables this limit
-		@page_limit = options[:pages].to_i if not options[:pages].nil?
+		@page_limit = options[:total_pages].to_i if not options[:total_pages].nil?
+		
+		@pages_per_level = 0 # 0 == unlimited
+		@pages_per_level = options[:pages_per_level] if not options[:pages_per_level].nil?
 		
 		@errors_count = 0
 		@errors_limit = 5
@@ -269,9 +272,14 @@ class Book
 			# запустить обработку в нитях
 			threads.each { |thr| thr.join }
 		
-			# увеличить глубину по выработке текущей
 			@current_depth += 1 if not freshLinksExists?(@current_depth)
+
+			if depthComplete?(@current_depth) then
+				msg_info_green "на уровне #{@current_depth} обработаны все страницы (#{@pages_per_level})"
+				@current_depth += 1
+			end
 			
+			# пауза перед следующей порцией
 			if 1 != @threads then
 				print "Ждём #{@threads} секунд";
 				(@threads-1).times { sleep 1 and print '.' };
@@ -323,6 +331,16 @@ class Book
 		#msg_debug  "#{__method__}(depth #{depth}) ==> #{res}"
 		
 		return res
+	end
+
+	def depthComplete?(depth)
+		msg_info "#{__method__}()"
+		
+		q = "SELECT  * FROM #{@table_name} WHERE depth=? AND status='processed' "
+		
+		res = @db.prepare(q).execute(depth)
+		
+		return ( res.count >= @pages_per_level and 0 != @pages_per_level )
 	end
 
 	def getFreshLinks ( depth, amount )
@@ -594,19 +612,21 @@ end
 
 
 book = Book.new('test book',{
-	:depth=>1,
-	:pages=>3,
-	:threads=>1,
-	:db_type => 'memory'
+	:depth => 15,
+	:pages_per_level => 2,
+	:total_pages => 50,
+	:threads => 1,
+	:db_type => 'file'
 })
 
 #book.addSource('http://opennet.ru')
 #book.addSource('https://ru.wikipedia.org/wiki/%D0%9E%D1%80%D1%83%D0%B6%D0%B5%D0%B9%D0%BD%D1%8B%D0%B9_%D0%BF%D0%BB%D1%83%D1%82%D0%BE%D0%BD%D0%B8%D0%B9')
 #book.addSource('https://ru.wikipedia.org/wiki/Оружейный_плутоний')
-#book.addSource('https://ru.wikipedia.org/wiki/Амёба')
+book.addSource('https://ru.wikipedia.org/wiki/Амёба')
 #book.addSource('https://ru.wikipedia.org/wiki/Союз_Советских_Социалистических_Республик')
 #book.addSource('https://ru.wikipedia.org/wiki/СССР')
-book.addSource('http://www.tldp.org/HOWTO/archived/IP-Subnetworking/IP-Subnetworking-1.html')
+# для проверки ожидания...
+#book.addSource('http://www.tldp.org/HOWTO/archived/IP-Subnetworking/IP-Subnetworking-1.html')
 
 
 filter1 = {
