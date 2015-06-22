@@ -210,7 +210,8 @@ class Book
 		msg_info "#{__method__}()"
 		
 		# пока не будет готово
-		while ( not prepareComplete? and freshLinksExists?(@current_depth) ) do
+		#until ( prepareComplete? ) do
+		while ( not prepareComplete? ) do
 				
 			msg_debug "CURRENT: pages #{@page_count}, depth #{@current_depth}"
 			
@@ -272,7 +273,9 @@ class Book
 			@current_depth += 1 if not freshLinksExists?(@current_depth)
 			
 			if 1 != @threads then
-				print "Ждём 5 секунд"; 4.times { sleep 1 and print '.' }; sleep 1 and puts '.'
+				print "Ждём #{@threads} секунд";
+				(@threads-1).times { sleep 1 and print '.' };
+				sleep 1 and puts '.'
 			end
 		end		
 		
@@ -289,7 +292,10 @@ class Book
 	
 		#return @current_depth == @target_depth
 		
-		if @current_depth > @target_depth then
+		if  not freshLinksExists?(@current_depth) then
+			reason = "все ссылки обработаны"
+		
+		elsif @current_depth > @target_depth then
 			reason = "достигнута глубина #{@target_depth}"
 		
 		elsif @errors_count > @errors_limit then
@@ -599,8 +605,8 @@ book = Book.new('test book',{
 #book.addSource('https://ru.wikipedia.org/wiki/Оружейный_плутоний')
 #book.addSource('https://ru.wikipedia.org/wiki/Амёба')
 #book.addSource('https://ru.wikipedia.org/wiki/Союз_Советских_Социалистических_Республик')
-book.addSource('https://ru.wikipedia.org/wiki/СССР')
-#book.addSource('https://ru.wikipedia.org/wiki/Гражданская_война_в_России')
+#book.addSource('https://ru.wikipedia.org/wiki/СССР')
+book.addSource('http://www.tldp.org/HOWTO/archived/IP-Subnetworking/IP-Subnetworking-1.html')
 
 
 filter1 = {
