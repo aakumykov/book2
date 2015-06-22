@@ -51,6 +51,7 @@ module Msg
 	end
 
 	def msg_error(arg)
+		@errors_count += 1
 		arg = arg.to_s
 		puts ("ОШИБКА: " + arg).red + 10.chr
 		File.open(@error_log,'w') if not File.exists?(@error_log)
@@ -58,6 +59,7 @@ module Msg
 	end
 	
 	def msg_alert(arg)
+		@alerts_count += 1
 		arg = arg.to_s
 		puts ("###: " + arg).yellow + 10.chr
 		File.open(@alert_log,'w') if not File.exists?(@alert_log)
@@ -131,14 +133,17 @@ class Book
 		@target_depth = options[:depth].to_i if not options[:depth].nil?
 		
 		@page_count = 0 
-		@page_limit = 5		# 0 (zero) disables this limit
+		@page_limit = 0		# 0 (zero) disables this limit
 		@page_limit = options[:total_pages].to_i if not options[:total_pages].nil?
 		
 		@pages_per_level = 0 # 0 == unlimited
 		@pages_per_level = options[:pages_per_level] if not options[:pages_per_level].nil?
 		
 		@errors_count = 0
-		@errors_limit = 5
+		@errors_limit = 100
+		
+		@alerts_count = 0 # только для информации
+		@alerts_limit = 0 # пока не используется
 		
 		@timeout_limit = 60
 		
@@ -281,8 +286,13 @@ class Book
 			
 			# пауза перед следующей порцией
 			if 1 != @threads then
-				print "Ждём #{@threads} секунд";
-				(@threads-1).times { sleep 1 and print '.' };
+				msg_info_blue "==== страниц #{@page_count}===="
+				msg_info_blue "====  глубина #{@current_depth}===="
+				msg_info_blue "==== ошибок #{@errors_count}===="
+				msg_info_blue "==== предупреждений #{@alerts_count}===="
+
+				print "Ждём 5 секунд";
+				4.times { sleep 1 and print '.' };
 				sleep 1 and puts '.'
 			end
 		end		
@@ -309,7 +319,7 @@ class Book
 		elsif @errors_count > @errors_limit then
 			reason = "достигнут максимум ошибок (#{@errors_limit})"
 		
-		elsif ( (0 != @page_limit) and (@page_count >= @page_limit) ) then
+		elsif ( @page_count >= @page_limit) and (0 != @page_limit)  then
 			reason = "достигнут максимум страниц (#{@page_limit})"
 		
 		else
@@ -318,6 +328,9 @@ class Book
 
 		msg_info ""
 		msg_info_blue "===== #{reason} ====="
+		msg_info_blue "==== страниц #{@page_count}===="
+		msg_info_blue "==== текущая глубина #{@current_depth}===="
+		msg_info_blue "==== ошибок #{@errors_count}===="
 		return true
 	end
 
@@ -372,7 +385,7 @@ class Book
 		filter = getFilterFor(uri,'links')
 		
 		links = filterLinks(links,filter)
-		#puts "filtered: #{links.size}"
+		#links.each { |lnk| puts URI::decode(lnk) }
 
 		return links
 	end
@@ -612,11 +625,9 @@ end
 
 
 book = Book.new('test book',{
-	:depth => 15,
-	:pages_per_level => 2,
-	:total_pages => 50,
-	:threads => 1,
-	:db_type => 'file'
+	:depth => 2,
+	:threads => 10,
+	:db_type => 'memory'
 })
 
 #book.addSource('http://opennet.ru')
