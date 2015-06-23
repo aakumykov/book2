@@ -397,13 +397,13 @@ class Book
 		
 		uri = URI::encode(uri) if not uri.urlencoded?
 		
-		q_check = "SELECT * FROM #{@table_name} WHERE uri = ?"
-		res = @db.prepare(q_check).execute(uri)
-		
-		if res.count > 0 then
-			msg_info_cyan "Дубликат #{uri}"
-			return false
-		end
+		#~ q_check = "SELECT * FROM #{@table_name} WHERE uri = ?"
+		#~ res = @db.prepare(q_check).execute(uri)
+		#~ 
+		#~ if res.count > 0 then
+			#~ msg_info_cyan "Дубликат #{uri}"
+			#~ return false
+		#~ end
 		
 		q = "INSERT INTO #{@table_name} (id, parent_id, depth, status, uri) VALUES (?, ?, ?, ?, ?)"
 		

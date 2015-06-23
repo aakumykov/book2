@@ -1,0 +1,82 @@
+getFreshLinks(2,25)
+loadPage('https://ru.wikipedia.org/wiki/Gemeinsame_Normdatei')
+loadPage('https://ru.wikipedia.org/wiki/Международный_идентификатор_стандартных_наименований')
+loadPage('https://ru.wikipedia.org/wiki/VIAF')
+loadPage('https://ru.wikipedia.org/wiki/Бори_де_Сен-Венсан,_Жан-Батист')
+loadPage('https://ru.wikipedia.org/wiki/30_марта')
+loadPage('https://ru.wikipedia.org/wiki/Арнштадт')
+loadPage('https://ru.wikipedia.org/wiki/27_марта')
+loadPage('https://ru.wikipedia.org/wiki/Альма-матер')
+loadPage('https://ru.wikipedia.org/wiki/Академия_изобразительных_искусств_(Нюрнберг)')
+loadPage('https://ru.wikipedia.org/wiki/Гравёр')
+loadPage('https://ru.wikipedia.org/wiki/Амёба')
+loadPage('https://ru.wikipedia.org/wiki/Национальная_библиотека_Франции')
+loadPage('https://ru.wikipedia.org/wiki/Энциклопедический_словарь_Брокгауза_и_Ефрона')
+loadPage('https://ru.wikipedia.org/wiki/Контрольный_номер_Библиотеки_Конгресса')
+loadPage('https://ru.wikipedia.org/wiki/Королевская_национальная_библиотека_Нидерландов')
+loadPage('https://ru.wikipedia.org/wiki/Немецкий_язык')
+loadPage('https://ru.wikipedia.org/wiki/Энтомология')
+loadPage('https://ru.wikipedia.org/wiki/Нюрнберг')
+loadPage('https://ru.wikipedia.org/wiki/1759_год')
+loadPage('https://ru.wikipedia.org/wiki/Геер,_Карл_де')
+loadPage('https://ru.wikipedia.org/wiki/Заглавная_страница')
+loadPage('https://ru.wikipedia.org/wiki/Реомюр,_Рене_Антуан')
+loadPage('https://ru.wikipedia.org/wiki/Рёзель_фон_Розенгоф,_Август_Иоганн')
+loadPage('https://ru.wikipedia.org/wiki/Портретная_миниатюра')
+loadPage('https://ru.wikipedia.org/wiki/1705_год')
+заголовок: Gemeinsame Normdatei — Википедия
+savePage('Gemeinsame Normdatei — Википедия', '/tmp/book2/test_book/b43d58ea-e487-4e32-a8c6-7d0a86597c6a.html'), body size: 9391
+collectLinks(https://ru.wikipedia.org/wiki/Gemeinsame_Normdatei)
+заголовок: Международный идентификатор стандартных наименований — Википедия
+savePage('Международный идентификатор стандартных наименований — Википедия', '/tmp/book2/test_book/eec5dfea-6ad8-47ca-8530-ee6877202434.html'), body size: 58930
+setLinkStatus(), Gemeinsame Normdatei — Википедия, processed, b43d58ea-e487-4e32-a8c6-7d0a86597c6a
+заголовок: Бори де Сен-Венсан, Жан-Батист — Википедия
+заголовок: VIAF — Википедия
+savePage('Бори де Сен-Венсан, Жан-Батист — Википедия', '/tmp/book2/test_book/e400951c-25f0-4847-824c-c88f12e782f1.html'), body size: 40578
+collectLinks(https://ru.wikipedia.org/wiki/Международный_идентификатор_стандартных_наименований)
+savePage('VIAF — Википедия', '/tmp/book2/test_book/8fef6aa4-0f28-47ee-8b45-c141152ce264.html'), body size: 67151
+заголовок: Арнштадт — Википедия
+setLinkStatus(), Международный идентификатор стандартных наименований — Википедия, processed, eec5dfea-6ad8-47ca-8530-ee6877202434
+collectLinks(https://ru.wikipedia.org/wiki/Бори_де_Сен-Венсан,_Жан-Батист)
+заголовок: Гравюра — Википедия
+заголовок: 30 марта — Википедия
+collectLinks(https://ru.wikipedia.org/wiki/VIAF)
+заголовок: 27 марта — Википедия
+заголовок: Амёба — Википедия
+заголовок: Академия изобразительных искусств (Нюрнберг) — Википедия
+заголовок: Альма-матер — Википедия
+savePage('Арнштадт — Википедия', '/tmp/book2/test_book/ce2aa057-2395-469b-824b-5f70f2ae6621.html'), body size: 49618
+setLinkStatus(), Бори де Сен-Венсан, Жан-Батист — Википедия, processed, e400951c-25f0-4847-824c-c88f12e782f1
+заголовок: Национальная библиотека Франции — Википедия
+savePage('Гравюра — Википедия', '/tmp/book2/test_book/b80c8eb3-9e0b-49c2-a293-79b99a3d4885.html'), body size: 31304
+savePage('27 марта — Википедия', '/tmp/book2/test_book/826997d5-dac0-44e3-9a14-85c01db05599.html'), body size: 92283
+setLinkStatus(), VIAF — Википедия, processed, 8fef6aa4-0f28-47ee-8b45-c141152ce264
+savePage('30 марта — Википедия', '/tmp/book2/test_book/19bf87cd-b332-45d6-afb1-f365465aca5c.html'), body size: 90635
+collectLinks(https://ru.wikipedia.org/wiki/27_марта)
+savePage('Альма-матер — Википедия', '/tmp/book2/test_book/70f46fcd-1585-4378-b1ff-8a72dfcba84c.html'), body size: 8315
+collectLinks(https://ru.wikipedia.org/wiki/Альма-матер)
+savePage('Академия изобразительных искусств (Нюрнберг) — Википедия', '/tmp/book2/test_book/2766d65c-f2e6-4be7-83d2-42233c2495c4.html'), body size: 24116
+collectLinks(https://ru.wikipedia.org/wiki/Арнштадт)
+savePage('Амёба — Википедия', '/tmp/book2/test_book/90c5be0a-de38-4340-aafb-2d2673e3a914.html'), body size: 34529
+collectLinks(https://ru.wikipedia.org/wiki/30_марта)
+savePage('Национальная библиотека Франции — Википедия', '/tmp/book2/test_book/c75747ef-5e58-4ec7-957b-6e2452e1de4d.html'), body size: 87514
+collectLinks(https://ru.wikipedia.org/wiki/Гравёр)
+setLinkStatus(), 27 марта — Википедия, processed, 826997d5-dac0-44e3-9a14-85c01db05599
+collectLinks(https://ru.wikipedia.org/wiki/Академия_изобразительных_искусств_(Нюрнберг))
+setLinkStatus(), Альма-матер — Википедия, processed, 70f46fcd-1585-4378-b1ff-8a72dfcba84c
+setLinkStatus(), Арнштадт — Википедия, processed, ce2aa057-2395-469b-824b-5f70f2ae6621
+setLinkStatus(), 30 марта — Википедия, processed, 19bf87cd-b332-45d6-afb1-f365465aca5c
+collectLinks(https://ru.wikipedia.org/wiki/Амёба)
+collectLinks(https://ru.wikipedia.org/wiki/Национальная_библиотека_Франции)
+setLinkStatus(), Гравюра — Википедия, processed, b80c8eb3-9e0b-49c2-a293-79b99a3d4885
+setLinkStatus(), Амёба — Википедия, processed, 90c5be0a-de38-4340-aafb-2d2673e3a914
+setLinkStatus(), Академия изобразительных искусств (Нюрнберг) — Википедия, processed, 2766d65c-f2e6-4be7-83d2-42233c2495c4
+setLinkStatus(), Национальная библиотека Франции — Википедия, processed, c75747ef-5e58-4ec7-957b-6e2452e1de4d
+/var/lib/gems/1.9.1/gems/curl-0.0.9/lib/curl.rb:271:in `popen': Cannot allocate memory - curl  --cookie "/tmp/curl/curl_0.6986607533912741_0.7669946084672239.jar" --cookie-jar "/tmp/curl/curl_0.6986607533912741_0.7669946084672239.jar"   --user-agent "Ruby/1.9.3, Contacts: aakumykov@yandex.ru"   --connect-timeout 6  --max-time 8 --retry 1  --location --compressed --silent -k    "https://ru.wikipedia.org/wiki/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9_%D0%BD%D0%BE%D0%BC%D0%B5%D1%80_%D0%91%D0%B8%D0%B1%D0%BB%D0%B8%D0%BE%D1%82%D0%B5%D0%BA%D0%B8_%D0%9A%D0%BE%D0%BD%D0%B3%D1%80%D0%B5%D1%81%D1%81%D0%B0"   (Errno::ENOMEM)
+	from /var/lib/gems/1.9.1/gems/curl-0.0.9/lib/curl.rb:271:in `open_pipe'
+	from /var/lib/gems/1.9.1/gems/curl-0.0.9/lib/curl.rb:135:in `get_raw'
+	from /var/lib/gems/1.9.1/gems/curl-0.0.9/lib/curl.rb:120:in `get'
+	from book2.rb:375:in `loadPage'
+	from book2.rb:249:in `block (2 levels) in prepare'
+
+
