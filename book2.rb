@@ -73,6 +73,14 @@ module Msg
 	def msg_info_green(arg)
 		puts arg.to_s.green + 10.chr
 	end
+	
+	def msg_info_cyan(arg)
+		puts arg.to_s.cyan + 10.chr
+	end
+	
+	def msg_ahtung(arg)
+		puts arg.to_s.black.on_yellow + 10.chr
+	end
 end
 
 class String
@@ -134,7 +142,7 @@ class Book
 		
 		@page_count = 0 
 		@page_limit = 0		# 0 (zero) disables this limit
-		@page_limit = options[:total_pages].to_i if not options[:total_pages].nil?
+		@page_limit = options[:pages].to_i if not options[:pages].nil?
 		
 		@pages_per_level = 0 # 0 == unlimited
 		@pages_per_level = options[:pages_per_level] if not options[:pages_per_level].nil?
@@ -389,20 +397,15 @@ class Book
 		
 		uri = URI::encode(uri) if not uri.urlencoded?
 		
-		q = [
-			"INSERT INTO #{@table_name}",
-			'(id, parent_id, depth, status, uri) VALUES ',
-			"(",
-				"?", ',',
-				"?", ',',
-				"?", ',',
-				"?", ',',
-				"?",
-			")",
-		]
+		q_check = "SELECT * FROM #{@table_name} WHERE uri = ?"
+		res = @db.prepare(q_check).execute(uri)
 		
-		q = q.join(' ')
-		#puts "|#{q}|";
+		if res.count > 0 then
+			msg_info_cyan "Дубликат #{uri}"
+			return false
+		end
+		
+		q = "INSERT INTO #{@table_name} (id, parent_id, depth, status, uri) VALUES (?, ?, ?, ?, ?)"
 		
 		begin
 			@db.prepare(q).execute(
@@ -413,10 +416,7 @@ class Book
 				uri
 			)
 		rescue
-			msg_error "|#{q}|"
-			File.open(@error_log,'a') { |file|
-				file.write(q)
-			}
+			msg_error "'#{q}'"
 		end
 	end
 	
@@ -635,14 +635,16 @@ end
 book = Book.new('test book',{
 	:depth => 2,
 	:threads => 25,
+	:pages => 0,
 	:db_type => 'memory'
 })
 
 #book.addSource('http://opennet.ru')
 #book.addSource('https://ru.wikipedia.org/wiki/%D0%9E%D1%80%D1%83%D0%B6%D0%B5%D0%B9%D0%BD%D1%8B%D0%B9_%D0%BF%D0%BB%D1%83%D1%82%D0%BE%D0%BD%D0%B8%D0%B9')
 #book.addSource('https://ru.wikipedia.org/wiki/Оружейный_плутоний')
-#book.addSource('https://ru.wikipedia.org/wiki/Амёба')
-#book.addSource('https://ru.wikipedia.org/wiki/СССР')
+book.addSource("https://ru.wikipedia.org/wiki/Амёба")
+
+# ================ ДЛЯ ПРОВЕРОК ===============
 # для проверки ожидания...
 #book.addSource('http://www.tldp.org/HOWTO/archived/IP-Subnetworking/IP-Subnetworking-1.html')
 
@@ -689,6 +691,9 @@ book = Book.new('test book',{
 ## кривое поведение на этой:
 ##
 # book.addSource('https://ru.wikipedia.org/wiki/476')
+
+# ================ ДЛЯ ПРОВЕРОК ===============
+
 
 filter1 = {
 	'opennet.ru' => {
