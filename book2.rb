@@ -156,7 +156,7 @@ class Book
 		@timeout_limit = 60
 		
 		case options[:db_type] 
-		when 'file'
+		when 'f'
 			@db_name = 'db_' + @@script_name + '.sqlite'
 		else
 			@db_name = ':memory:'
@@ -164,35 +164,29 @@ class Book
 		
 		@table_name = 'book_info'
 
-		table_def = [
-			"CREATE TABLE #{@table_name} (",
-			'id TEXT PRIMARY KEY',
-			',',
-			'parent_id TEXT',
-			',',
-			'depth INT',
-			',',
-			'status TEXT',
-			',',
-			'uri TEXT',
-			',',
-			'archor_name TEXT',
-			',',
-			'title TEXT',
-			',',
-			'file TEXT',
-			')'
-		]
+		table_def = <<QWERTY
+CREATE TABLE #{@table_name} 
+(
+	id TEXT PRIMARY KEY,
+	parent_id TEXT,
+	depth INT,
+	status TEXT,
+	uri TEXT,
+	archor_name TEXT,
+	title TEXT,
+	file TEXT
+)
+QWERTY
 
 		@db = SQLite3::Database.new(@db_name)
 		
 		@db.results_as_hash = true
-		@db.execute("PRAGMA journal_mode=OFF")
 		
-		@db.execute("DROP TABLE IF EXISTS #{@table_name}")
+		@db.query("PRAGMA journal_mode=OFF")
 		
-		q = table_def.join(' ')
-		@db.execute(q)
+		@db.query("DROP TABLE IF EXISTS #{@table_name}")
+		
+		@db.query(table_def)
 	end
 
 	def addSource(uri)
@@ -304,8 +298,34 @@ class Book
 		
 	end
 	
+	def getBookStructure
+		msg_debug "#{__method__}()"
+		
+		def getTocItems(id)
+			list = []
+			res = @db.prepare("SELECT * FROM #{@table_name} WHERE parent_id=? AND status='processed'").execute(id)
+			res.each { |row|
+				list << {
+					:title => row['title'],
+					:file => row['file'],
+					:childs => getTocItems(row['id'])
+				}
+			}
+			return list
+		end
+
+		res = @db.query("SELECT * FROM #{@table_name} WHERE depth=0 AND status='processed'")
+		raise "пустое оглавление" if 0 == res.count
+		
+		res.reset # ВАЖНО, сброс курсора после 'res.count'
+		root_id = res.next['id']
+
+		return getTocItems(root_id)
+	end
+	
 	def create(file='')
 		msg_info "#{__method__}(#{file})"
+		ap getBookStructure
 	end
 
 
@@ -397,13 +417,13 @@ class Book
 		
 		uri = URI::encode(uri) if not uri.urlencoded?
 		
-		#q_check = "SELECT * FROM #{@table_name} WHERE uri = ?"
-		#res = @db.prepare(q_check).execute(uri)
+		q_check = "SELECT * FROM #{@table_name} WHERE uri = ?"
+		res = @db.prepare(q_check).execute(uri)
 		
-		#if res.count > 0 then
-		#	msg_info_cyan "Дубликат #{uri}"
-		#	return false
-		#end
+		if res.count > 0 then
+			msg_debug "Дубликат #{uri}"
+			return false
+		end
 		
 		q = "INSERT INTO #{@table_name} (id, parent_id, depth, status, uri) VALUES (?, ?, ?, ?, ?)"
 		
@@ -429,7 +449,8 @@ class Book
 		
 		msg_info "#{__method__}('#{title}', '#{file_name}'), body size: #{page_body.size}"
 
-		File.open(file_name,'w') { |file|
+		begin
+			File.open(file_name,'w') { |file|
 			file.write <<QWERTY
  <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
      "http://www.w3.org/TR/html4/loose.dtd">
@@ -444,12 +465,22 @@ class Book
 </html>
 QWERTY
 		}
+		rescue
+			msg_error "запись #{title} в файл #{file_name}"
+		end
+		
+		begin
+			q = "UPDATE #{@table_name} SET file='#{file_name}' WHERE id='#{id}'"
+			@db.query(q)
+		rescue
+			msg_error "сохранение в БД имени файла (#{file_name}) для '#{title}'"
+		end
 	end
 	
 	def setLinkStatus(id,options)
 		msg_info "#{__method__}(), #{options[:title]}, #{options[:status]}, #{id}"
 		
-		q = "UPDATE #{@table_name} SET status='#{options[:status]}' WHERE id='#{id}'"
+		q = "UPDATE #{@table_name} SET status='#{options[:status]}', title='#{options[:title]}' WHERE id='#{id}'"
 		
 		# писать в БД до победного конца (что-то пошли дедлоки)
 		res = nil
@@ -633,16 +664,17 @@ QWERTY
 end
 
 book = Book.new('test book',{
-	:depth => 2,
-	:threads => 5,
-	:pages => 0,
-	:db_type => 'memory'
+	:depth => 5,
+	:threads => 1,
+	:pages => 30,
+	:pages_per_level => 3,
+	:db_type => 'm'
 })
 
 #book.addSource('http://opennet.ru')
 #book.addSource('https://ru.wikipedia.org/wiki/%D0%9E%D1%80%D1%83%D0%B6%D0%B5%D0%B9%D0%BD%D1%8B%D0%B9_%D0%BF%D0%BB%D1%83%D1%82%D0%BE%D0%BD%D0%B8%D0%B9')
 #book.addSource('https://ru.wikipedia.org/wiki/Оружейный_плутоний')
-book.addSource("https://ru.wikipedia.org/wiki/Амёба")
+book.addSource("https://ru.wikipedia.org/wiki/Оргазм")
 
 # ================ ДЛЯ ПРОВЕРОК ===============
 # для проверки ожидания...
@@ -655,7 +687,7 @@ book.addSource("https://ru.wikipedia.org/wiki/Амёба")
 #~ book = Book.new('test book',{
 	#~ :depth => 2,
 	#~ :threads => 25,
-	#~ :db_type => 'memory'
+	#~ :db_type => 'm'
 #~ })
 
 ##
