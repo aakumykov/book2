@@ -80,3 +80,35 @@ setLinkStatus(), Национальная библиотека Франции �
 	from book2.rb:249:in `block (2 levels) in prepare'
 
 
+
+getFreshLinks(2,5)
+loadPage('https://ru.wikipedia.org/wiki/Еврейско-итальянские_диалекты')
+loadPage('https://ru.wikipedia.org/wiki/Корсиканский_язык')
+loadPage('https://ru.wikipedia.org/wiki/Римский_диалект')
+loadPage('https://ru.wikipedia.org/wiki/Истророманский_язык')
+loadPage('https://ru.wikipedia.org/wiki/Современный_венетский_язык')
+заголовок: Еврейско-итальянские диалекты — Википедия
+savePage('Еврейско-итальянские диалекты — Википедия', '/tmp/book2/test_book/63369364-cef7-46a7-b3d2-0e495a10009b.html'), body size: 79886
+заголовок: Корсиканский язык — Википедия
+savePage('Корсиканский язык — Википедия', '/tmp/book2/test_book/66b10a27-55c4-4baf-b36e-28acf3f4efd3.html'), body size: 56351
+collectLinks(https://ru.wikipedia.org/wiki/Корсиканский_язык)
+setLinkStatus(), Корсиканский язык — Википедия, processed, 66b10a27-55c4-4baf-b36e-28acf3f4efd3
+collectLinks(https://ru.wikipedia.org/wiki/Еврейско-итальянские_диалекты)
+заголовок: Римский диалект — Википедия
+заголовок: Истророманский язык — Википедия
+setLinkStatus(), Еврейско-итальянские диалекты — Википедия, processed, 63369364-cef7-46a7-b3d2-0e495a10009b
+savePage('Римский диалект — Википедия', '/tmp/book2/test_book/e536e135-1a2a-45a0-a3e8-81c89a8a2e18.html'), body size: 62730
+заголовок: Современный венетский язык — Википедия
+savePage('Истророманский язык — Википедия', '/tmp/book2/test_book/6ccf0da3-3473-4087-b75d-34c595211815.html'), body size: 55095
+collectLinks(https://ru.wikipedia.org/wiki/Римский_диалект)
+savePage('Современный венетский язык — Википедия', '/tmp/book2/test_book/0c3e859b-a786-4f04-b276-aa3f1e6acaad.html'), body size: 104053
+collectLinks(https://ru.wikipedia.org/wiki/Современный_венетский_язык)
+collectLinks(https://ru.wikipedia.org/wiki/Истророманский_язык)
+setLinkStatus(), Римский диалект — Википедия, processed, e536e135-1a2a-45a0-a3e8-81c89a8a2e18
+setLinkStatus(), Истророманский язык — Википедия, processed, 6ccf0da3-3473-4087-b75d-34c595211815
+setLinkStatus(), Современный венетский язык — Википедия, processed, 0c3e859b-a786-4f04-b276-aa3f1e6acaad
+book2.rb:284:in `join': deadlock detected (fatal)
+	from book2.rb:284:in `block in prepare'
+	from book2.rb:284:in `each'
+	from book2.rb:284:in `prepare'
+	from book2.rb:721:in `<main>'
