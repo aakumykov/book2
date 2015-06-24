@@ -142,10 +142,14 @@ class Book
 		
 		@page_count = 0 
 		@page_limit = 0		# 0 (zero) disables this limit
-		@page_limit = options[:pages].to_i if not options[:pages].nil?
+		@page_limit = options[:total_pages].to_i if not options[:total_pages].nil?
 		
 		@pages_per_level = 0 # 0 == unlimited
 		@pages_per_level = options[:pages_per_level] if not options[:pages_per_level].nil?
+		
+		# параметр нужен на период тестирования для ограничения нагрузки на файловую БД
+		@links_per_level = 0 # 0 == unlimited
+		@links_per_level = options[:links_per_level] if not options[:links_per_level].nil?
 		
 		@errors_count = 0
 		@errors_limit = 100
@@ -308,6 +312,7 @@ QWERTY
 				list << {
 					:title => row['title'],
 					:file => row['file'],
+					:uri => row['uri'],
 					:childs => getTocItems(row['id'])
 				}
 			}
@@ -552,7 +557,10 @@ QWERTY
 		
 		www_links = []
 		
+		count = 0
 		all_links.each { |item|
+		
+			break if @links_per_level != 0 and count >= @links_per_level
 			
 			next if item.match(/^mailto:/)
 			next if item.match(/action=edit/)
@@ -666,9 +674,10 @@ end
 book = Book.new('test book',{
 	:depth => 5,
 	:threads => 1,
-	:pages => 30,
-	:pages_per_level => 3,
-	:db_type => 'm'
+	:total_pages => 30,
+	:pages_per_level => 2,
+	:links_per_level => 5,
+	:db_type => 'f'
 })
 
 #book.addSource('http://opennet.ru')
