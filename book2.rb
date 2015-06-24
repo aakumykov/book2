@@ -310,6 +310,7 @@ QWERTY
 			res = @db.prepare("SELECT * FROM #{@table_name} WHERE parent_id=? AND status='processed'").execute(id)
 			res.each { |row|
 				list << {
+					:id => row['id'],
 					:title => row['title'],
 					:file => row['file'],
 					:uri => row['uri'],
@@ -330,7 +331,13 @@ QWERTY
 	
 	def create(file='')
 		msg_info "#{__method__}(#{file})"
-		ap getBookStructure
+		
+		bookArray = getBookStructure
+		
+		CreateEpub(
+			{ :title=>@title, :author=>@author },
+			bookArray
+		)
 	end
 
 
@@ -560,7 +567,7 @@ QWERTY
 		count = 0
 		all_links.each { |item|
 		
-			break if @links_per_level != 0 and count >= @links_per_level
+			break if @links_per_level != 0 and count > @links_per_level
 			
 			next if item.match(/^mailto:/)
 			next if item.match(/action=edit/)
@@ -582,6 +589,8 @@ QWERTY
 			end
 						
 			www_links << item
+			
+			count += 1
 		}
 		
 		
@@ -669,12 +678,52 @@ QWERTY
 		msg_info_blue "==== предупреждений #{@alerts_count}===="
 	end
 
+
+	def CreateEpub (metadata, bookArray)
+		msg_info "#{__method__}()"
+=begin
+		def MakeNcx(bookArray)
+				msg_info "#{__method__}()"
+				
+				data = ''
+				
+				bookArray.each { |item|
+					
+					id = Digest::MD5.hexdigest(item[:id])
+					playOrder = item[:id]
+					
+					data += <<NAVPOINT
+	<navPoint id='#{id}' playOrder='#{playOrder}'>
+		<navLabel>
+			<text>#{item[:title]}</text>
+		</navLabel>
+		<content src='#{item[:file]}'/>
+NAVPOINT
+					if not item[:childs].nil? then
+						data += MakeNcx(item[:childs])
+					end
+					
+					data += "\n</navPoint>"
+				}
+			end
+		end
+		
+		def MakeOpf
+		
+		end
+		
+		ncxData = MakeNcx()
+		#opfData = MakeOpf()
+=end	
+	end
+
+
 end
 
 book = Book.new('test book',{
 	:depth => 5,
 	:threads => 1,
-	:total_pages => 30,
+	:total_pages => 3,
 	:pages_per_level => 2,
 	:links_per_level => 5,
 	:db_type => 'f'
