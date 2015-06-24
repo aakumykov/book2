@@ -313,7 +313,7 @@ QWERTY
 					:id => row['id'],
 					:title => row['title'],
 					:file => row['file'],
-					:uri => row['uri'],
+					#:uri => row['uri'],
 					:childs => getTocItems(row['id'])
 				}
 			}
@@ -681,40 +681,42 @@ QWERTY
 
 	def CreateEpub (metadata, bookArray)
 		msg_info "#{__method__}()"
-=begin
+		
+		ap bookArray
+		
 		def MakeNcx(bookArray)
-				msg_info "#{__method__}()"
+			msg_debug "#{__method__}()"
+			
+			data = ''
+			
+			bookArray.each { |item|
+				id = Digest::MD5.hexdigest(item[:id])
+				playOrder = item[:id]
+				#puts "id: #{id}, playOrder: #{playOrder}"
 				
-				data = ''
+				data += <<QWERTY
+<navPoint id='#{id}' playOrder='#{playOrder}'>
+<navLabel>
+	<text>#{item[:title]}</text>
+</navLabel>
+<content src='#{item[:file]}'/>
+QWERTY
 				
-				bookArray.each { |item|
-					
-					id = Digest::MD5.hexdigest(item[:id])
-					playOrder = item[:id]
-					
-					data += <<NAVPOINT
-	<navPoint id='#{id}' playOrder='#{playOrder}'>
-		<navLabel>
-			<text>#{item[:title]}</text>
-		</navLabel>
-		<content src='#{item[:file]}'/>
-NAVPOINT
-					if not item[:childs].nil? then
-						data += MakeNcx(item[:childs])
-					end
-					
-					data += "\n</navPoint>"
-				}
-			end
+				data += MakeNcx(item[:childs]) if 0 != item[:childs].count 
+				
+				data += "</navPoint>\n"
+			}
+				
+			puts data
+
+			return data
 		end
 		
 		def MakeOpf
-		
 		end
 		
-		ncxData = MakeNcx()
+		ncxData = MakeNcx(bookArray)
 		#opfData = MakeOpf()
-=end	
 	end
 
 
@@ -722,9 +724,10 @@ end
 
 book = Book.new('test book',{
 	:depth => 5,
+	:total_pages => 15,
+	:pages_per_level =>3,
+	
 	:threads => 1,
-	:total_pages => 3,
-	:pages_per_level => 2,
 	:links_per_level => 5,
 	:db_type => 'f'
 })
