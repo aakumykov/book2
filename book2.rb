@@ -752,8 +752,9 @@ MANIFEST
 				
 			end
 			
-			makeManifest ( tocArray )
-			makeSpine ( tocArray )
+			makeManifest(tocArray)
+			makeSpine(tocArray)
+			#make()
 		end
 		
 		ncxData = MakeNcx(bookArray)
