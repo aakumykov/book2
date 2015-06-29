@@ -335,8 +335,15 @@ QWERTY
 		bookArray = getBookStructure
 		
 		CreateEpub(
-			{ :title=>@title, :author=>@author },
-			bookArray
+			bookArray,
+			{
+				:title=>@title, 
+				:author=>@author,
+				:language => 'ru',
+				:id => SecureRandom.uuid, 
+				:generator_name => @@script_name,
+				:generator_version => '0.0.1a',
+			}
 		)
 	end
 
@@ -679,7 +686,7 @@ QWERTY
 	end
 
 
-	def CreateEpub (metadata, bookArray)
+	def CreateEpub (bookArray, metadata)
 		msg_info "#{__method__}()"
 		
 		ap bookArray
@@ -687,40 +694,38 @@ QWERTY
 		def MakeNcx(bookArray)
 			msg_debug "#{__method__}()"
 			
-			data = ''
+			output = ''
 			
 			bookArray.each { |item|
 				id = Digest::MD5.hexdigest(item[:id])
 				playOrder = item[:id]
 				#puts "id: #{id}, playOrder: #{playOrder}"
 				
-				data += <<QWERTY
+				output += <<NCX
 <navPoint id='#{id}' playOrder='#{playOrder}'>
-<navLabel>
-	<text>#{item[:title]}</text>
-</navLabel>
+	<navLabel>
+		<text>#{item[:title]}</text>
+	</navLabel>
 <content src='#{item[:file]}'/>
-QWERTY
+NCX
 				
-				data += MakeNcx(item[:childs]) if 0 != item[:childs].count 
+				output += MakeNcx(item[:childs]) if 0 != item[:childs].count 
 				
-				data += "</navPoint>\n"
+				output += "</navPoint>\n"
 			}
 				
-			puts data
-
-			return data
+			return output
 		end
 		
-		def MakeOpf ( tocArray )
+		def MakeOpf(bookArray, metadata)
+			puts "#{__method__}()"
 			
-			#~ manifest = nil
-			#~ spine = nil
-			#~ guide = nil
-			
-			def makeManifest(tocArray)
+			def makeManifest(bookArray)
+				puts "#{__method__}()"
+				
 				output = ''
-				tocArray.each{ |item|
+				
+				bookArray.each{ |item|
 					id = Digest::MD5.hexdigest(item[:id])
 					output += <<MANIFEST
 <item href='#{item[:uri]}' id='#{id}'  media-type='application/xhtml+xml' />
@@ -736,10 +741,12 @@ MANIFEST
 				return output
 			end
 			
-			def makeSpine(tocArray)
+			def makeSpine(bookArray)
+				puts "#{__method__}()"
+				
 				output = ''
 
-				tocArray.each { |item|
+				bookArray.each { |item|
 					id = Digest::MD5.hexdigest(item[:id])
 					output += "<itemref idref='#{id}' />\n";
 					output += self.makeSpine(item[:childs]) if not item[:childs].empty?
@@ -749,16 +756,55 @@ MANIFEST
 				puts output
 				
 				return output
-				
 			end
 			
-			makeManifest(tocArray)
-			makeSpine(tocArray)
-			#make()
+			def makeGuide(bookArray)
+				puts "#{__method__}()"
+				
+				output = ''
+				
+				bookArray.each { |item|
+					output += "<reference href='#{item[:file]}' title='#{item[:title]}' type='text' />\n"
+					output += self.makeGuide(item[:childs]) if not item[:childs].empty?
+				}
+				puts '======================= GUIDE ====================='
+				
+				puts output
+				
+				return output
+			end
+				
+			manifest = makeManifest(bookArray)
+			spine = makeSpine(bookArray)
+			guide = makeGuide(bookArray)
+			
+			opf = <<OPF_DATA
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="2.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+    <dc:identifier id="BookId" opf:scheme="UUID">urn:uuid:#{metadata[:id]}</dc:identifier>
+    <dc:title>#{metadata[:title]}</dc:title>
+    <dc:creator opf:role="aut">#{metadata[:author]}</dc:creator>
+    <dc:language>#{metadata[:language]}</dc:language>
+    <meta name="#{metadata[:generator_name]}" content="#{metadata[:generator_version]}" />
+  </metadata>
+  <manifest>#{manifest}
+	<item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml" />
+  </manifest>
+  <spine toc="ncx">#{spine}
+  </spine>
+  <guide>#{guide}
+  </guide>
+</package>
+OPF_DATA
+			return opf
 		end
 		
-		ncxData = MakeNcx(bookArray)
-		opfData = MakeOpf(bookArray)
+		#ncxData = MakeNcx(bookArray)
+		#puts ncxData
+		
+		opfData = MakeOpf(bookArray, metadata)
+		
 	end
 
 
