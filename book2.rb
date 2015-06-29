@@ -313,7 +313,7 @@ QWERTY
 					:id => row['id'],
 					:title => row['title'],
 					:file => row['file'],
-					#:uri => row['uri'],
+					:uri => row['uri'],
 					:childs => getTocItems(row['id'])
 				}
 			}
@@ -712,11 +712,52 @@ QWERTY
 			return data
 		end
 		
-		def MakeOpf
+		def MakeOpf ( tocArray )
+			
+			#~ manifest = nil
+			#~ spine = nil
+			#~ guide = nil
+			
+			def makeManifest(tocArray)
+				output = ''
+				tocArray.each{ |item|
+					id = Digest::MD5.hexdigest(item[:id])
+					output += <<MANIFEST
+<item href='#{item[:uri]}' id='#{id}'  media-type='application/xhtml+xml' />
+MANIFEST
+					if not item[:childs].empty? then
+						output += self.makeManifest ( item[:childs] )
+					end
+				}
+				
+				puts '======================= MANIFEST ====================='
+				puts output
+				
+				return output
+			end
+			
+			def makeSpine(tocArray)
+				output = ''
+
+				tocArray.each { |item|
+					id = Digest::MD5.hexdigest(item[:id])
+					output += "<itemref idref='#{id}' />\n";
+					output += self.makeSpine(item[:childs]) if not item[:childs].empty?
+				}
+				
+				puts '======================= SPINE ====================='
+				puts output
+				
+				return output
+				
+			end
+			
+			makeManifest ( tocArray )
+			makeSpine ( tocArray )
 		end
 		
 		ncxData = MakeNcx(bookArray)
-		#opfData = MakeOpf()
+		opfData = MakeOpf(bookArray)
 	end
 
 
@@ -724,7 +765,7 @@ end
 
 book = Book.new('test book',{
 	:depth => 5,
-	:total_pages => 15,
+	:total_pages => 5,
 	:pages_per_level =>3,
 	
 	:threads => 1,
@@ -811,8 +852,8 @@ filter1 = {
 book.addFilter(filter1)
 
 start_time = Time.now
+
 book.prepare()
 book.create('test-book.epub')
 
-puts ''
-puts "время выполнения: #{Time.now - start_time}"
+puts "", "время выполнения: #{Time.now - start_time}"
