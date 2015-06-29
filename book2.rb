@@ -691,9 +691,10 @@ QWERTY
 		
 		ap bookArray
 		
-		def MakeNcx(bookArray)
+		def MakeNcx(arg)
 			msg_debug "#{__method__}()"
 			
+			bookArray = arg[:bookArray]
 			output = ''
 			
 			bookArray.each { |item|
@@ -709,7 +710,7 @@ QWERTY
 <content src='#{item[:file]}'/>
 NCX
 				
-				output += MakeNcx(item[:childs]) if 0 != item[:childs].count 
+				output += self.MakeNcx(:bookArray => item[:childs]) if not item[:childs].empty?
 				
 				output += "</navPoint>\n"
 			}
@@ -717,66 +718,57 @@ NCX
 			return output
 		end
 		
-		def MakeOpf(bookArray, metadata)
-			puts "#{__method__}()"
+		def MakeOpf(arg)
+			msg_debug "#{__method__}()"
 			
 			def makeManifest(bookArray)
-				puts "#{__method__}()"
+				msg_debug "#{__method__}()"
 				
 				output = ''
 				
 				bookArray.each{ |item|
 					id = Digest::MD5.hexdigest(item[:id])
 					output += <<MANIFEST
-<item href='#{item[:uri]}' id='#{id}'  media-type='application/xhtml+xml' />
+	<item href='#{item[:uri]}' id='#{id}'  media-type='application/xhtml+xml' />
 MANIFEST
-					if not item[:childs].empty? then
-						output += self.makeManifest ( item[:childs] )
-					end
+					output += self.makeManifest(item[:childs]) if not item[:childs].empty?
 				}
-				
-				puts '======================= MANIFEST ====================='
-				puts output
 				
 				return output
 			end
 			
 			def makeSpine(bookArray)
-				puts "#{__method__}()"
+				msg_debug "#{__method__}()"
 				
 				output = ''
 
 				bookArray.each { |item|
 					id = Digest::MD5.hexdigest(item[:id])
-					output += "<itemref idref='#{id}' />\n";
+					output += "\n\t<itemref idref='#{id}' />";
 					output += self.makeSpine(item[:childs]) if not item[:childs].empty?
 				}
-				
-				puts '======================= SPINE ====================='
-				puts output
 				
 				return output
 			end
 			
 			def makeGuide(bookArray)
-				puts "#{__method__}()"
+				msg_debug "#{__method__}()"
 				
 				output = ''
 				
 				bookArray.each { |item|
-					output += "<reference href='#{item[:file]}' title='#{item[:title]}' type='text' />\n"
+					output += "\n\t<reference href='#{item[:file]}' title='#{item[:title]}' type='text' />"
 					output += self.makeGuide(item[:childs]) if not item[:childs].empty?
 				}
-				puts '======================= GUIDE ====================='
-				
-				puts output
 				
 				return output
 			end
 				
-			manifest = makeManifest(bookArray)
-			spine = makeSpine(bookArray)
-			guide = makeGuide(bookArray)
+			manifest = makeManifest(arg[:bookArray])
+			spine = makeSpine(arg[:bookArray])
+			guide = makeGuide(arg[:bookArray])
+
+			metadata = arg[:metadata]
 			
 			opf = <<OPF_DATA
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
@@ -800,11 +792,15 @@ OPF_DATA
 			return opf
 		end
 		
-		#ncxData = MakeNcx(bookArray)
-		#puts ncxData
+		ncxData = MakeNcx(:bookArray => bookArray)
+		puts '=================================== NCX =================================='
+		puts ncxData
 		
-		opfData = MakeOpf(bookArray, metadata)
+		opfData = MakeOpf(:metadata => metadata, :bookArray => bookArray)
+		puts '=================================== OPF =================================='
+		puts opfData
 		
+		File.open('/home/andrey/Desktop/1.xml','w') { |file| file.write(opfData) }
 	end
 
 
@@ -812,7 +808,7 @@ end
 
 book = Book.new('test book',{
 	:depth => 5,
-	:total_pages => 5,
+	:total_pages => 15,
 	:pages_per_level =>3,
 	
 	:threads => 1,
