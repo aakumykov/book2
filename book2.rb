@@ -100,32 +100,57 @@ class Book
 	public
 
 	# настроить
-	def initialize(title,options={})
-
-		msg_info "#{__method__}('#{title}','#{author}')"
-		
+	def initialize(arg)
+	
+		# определение имени скрипта
 		@@script_name = File.basename(File.realpath(__FILE__)).split('.')[0]
 
-		# свойства книги
-		self.title = title.to_s.strip
-		self.author = author.to_s.strip.empty? ? 'неизвестный автор' : author
-		self.language = language.to_s.strip.empty? ? 'ru' : language
+	
+		# настройки по умолчанию
+		@metadata = {
+			:title => 'неопределённый заголовок',
+			:author => 'неизвестный автор',
+			:language => 'ru',
+		}
+		@options = {
+			:depth => 5,
+			:total_pages => 15,
+			:pages_per_level =>3,
+			
+			:threads => 1,
+			:links_per_level => 5,
+			:db_type => 'm',
+		}
+		@source = []
 		
-		@generator_name = @@script_name
-		@generator_version = '0.0.1a'
-		@id = SecureRandom.uuid
+		# объединение начальных настроек с пользовательскими
+		@metadata.merge!(arg[:metadata]) if not arg[:metadata].nil?
+		@metadata.merge!(arg[:option]) if not arg[:option].nil?
+		if not arg[:source].nil? then
+			@source += arg[:source]
+			@source.uniq!
+		end
 
-		# сетевые настройки...
-		@user_agent = 'Ruby/1.9.3, Contacts: aakumykov@yandex.ru'
+		# добавление внутренних настроек
+		@metadata.merge!({
+			:generator_name => @@script_name,
+			:generator_version => '0.0.1a',
+			:id => SecureRandom.uuid,
+		})
+
 
 		# каталоги
 		@work_dir = Dir.tmpdir + '/' + @@script_name
 		Dir.mkdir(@work_dir) if not Dir.exists?(@work_dir)
 		msg_debug("work_dir: #{@work_dir}")
 
-		@book_dir = @work_dir + '/' + self.title.gsub(/\s/,'_')
+		@book_dir = @work_dir + '/' + @metadata[:title].gsub(/\s/,'_')
 		Dir.mkdir(@book_dir) if not Dir.exists?(@book_dir)
-		
+
+		# сетевые настройки...
+		@user_agent = 'Ruby/1.9.3, Contacts: aakumykov@yandex.ru'
+
+
 		# удаляю старые файлы
 		Dir.new(@book_dir).each { |item| File.delete "#{@book_dir}/#{item}" if item.match(/\.html/) }
 		
@@ -135,28 +160,26 @@ class Book
 		
 		File.delete(@error_log) if File.exists?(@error_log)
 		File.delete(@alert_log) if File.exists?(@alert_log)
-		
-		# рабочие параметры
-		@threads = 1
-		@threads = options[:threads].to_i if not options[:threads].nil?
 
-		@options = {}
+		# временное решение
 		@filters = {}
+
 		
+		# внтуренние переменные (сделать их private?)
 		@current_depth = 0
 		@target_depth = 0
-		@target_depth = options[:depth].to_i if not options[:depth].nil?
+		@target_depth = @options[:depth].to_i if not @options[:depth].nil?
 		
 		@page_count = 0 
 		@page_limit = 0		# 0 (zero) disables this limit
-		@page_limit = options[:total_pages].to_i if not options[:total_pages].nil?
+		@page_limit = @options[:total_pages].to_i if not @options[:total_pages].nil?
 		
 		@pages_per_level = 0 # 0 == unlimited
-		@pages_per_level = options[:pages_per_level] if not options[:pages_per_level].nil?
+		@pages_per_level = @options[:pages_per_level] if not @options[:pages_per_level].nil?
 		
 		# параметр нужен на период тестирования для ограничения нагрузки на файловую БД
 		@links_per_level = 0 # 0 == unlimited
-		@links_per_level = options[:links_per_level] if not options[:links_per_level].nil?
+		@links_per_level = @options[:links_per_level] if not @options[:links_per_level].nil?
 		
 		@errors_count = 0
 		@errors_limit = 100
@@ -166,7 +189,7 @@ class Book
 		
 		@timeout_limit = 60
 		
-		case options[:db_type] 
+		case @options[:db_type] 
 		when 'f'
 			@db_name = 'db_' + @@script_name + '.sqlite'
 		else
@@ -198,15 +221,19 @@ QWERTY
 		@db.query("DROP TABLE IF EXISTS #{@table_name}")
 		
 		@db.query(table_def)
+		
+		
+		@source.each { |src|
+			self.addSource(src)
+		}
 	end
 
 	def addSource(uri)
 		msg_info "#{__method__}(#{uri})"
 				
+		id = SecureRandom.uuid
 		link = URI::encode(uri) if not uri.urlencoded?
 		link = URI(link)
-		
-		id = SecureRandom.uuid
 		
 		saveLink(id, 0, 0, link.to_s)
 
@@ -328,12 +355,15 @@ QWERTY
 		end
 
 		res = @db.query("SELECT * FROM #{@table_name} WHERE depth=0 AND status='processed'")
-		raise "пустое оглавление" if 0 == res.count
 		
-		res.reset # ВАЖНО, сброс курсора после 'res.count'
-		root_id = res.next['id']
-
-		return getTocItems(root_id)
+		if 0 == res.count then
+			msg_alert "похоже, что книга пуста"
+			return {}
+		else
+			res.reset # ВАЖНО: сбрасывается курсор после 'res.count'
+			root_id = res.next['id']
+			return getTocItems(root_id)
+		end
 	end
 	
 	def create(file='')
@@ -696,6 +726,7 @@ QWERTY
 	def CreateEpub (bookArray, metadata)
 		msg_info "#{__method__}()"
 		
+		puts "\n=================================== bookArray =================================="
 		ap bookArray
 		
 		def MakeNcx(arg)
@@ -732,6 +763,7 @@ NCX
 			}
 
 			ncx = <<NCX_DATA
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
 <ncx version="2005-1" xmlns="http://www.daisy.org/z3986/2005/ncx/">
 <head>
@@ -849,73 +881,31 @@ OPF_DATA
 
 end
 
-book = Book.new('test book',{
-	:depth => 5,
-	:total_pages => 15,
-	:pages_per_level =>3,
-	
-	:threads => 1,
-	:links_per_level => 5,
-	:db_type => 'f'
-})
 
-#book.addSource('http://opennet.ru')
-#book.addSource('https://ru.wikipedia.org/wiki/%D0%9E%D1%80%D1%83%D0%B6%D0%B5%D0%B9%D0%BD%D1%8B%D0%B9_%D0%BF%D0%BB%D1%83%D1%82%D0%BE%D0%BD%D0%B8%D0%B9')
-#book.addSource('https://ru.wikipedia.org/wiki/Оружейный_плутоний')
-book.addSource("https://ru.wikipedia.org/wiki/Оргазм")
-
-# ================ ДЛЯ ПРОВЕРОК ===============
-# для проверки ожидания...
-#book.addSource('http://www.tldp.org/HOWTO/archived/IP-Subnetworking/IP-Subnetworking-1.html')
-
-##
-## Глюк
-##
-#~ book.addSource('https://ru.wikipedia.org/wiki/Амёба')
-#~ book = Book.new('test book',{
-	#~ :depth => 2,
-	#~ :threads => 25,
-	#~ :db_type => 'm'
-#~ })
-
-##
-## на Сенеке, предположительно, в вывод через <title> лезет HTML-код
-##
-#~ book.addSource('https://ru.wikipedia.org/wiki/Галльская_война')
-#~ book.addSource('https://ru.wikipedia.org/wiki/55_до_н._э.')
-#~ book.addSource('https://ru.wikipedia.org/wiki/54_до_н._э.')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Римское_завоевание_Британии')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Римская_империя')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Публий_Корнелий_Тацит')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Ювенал')
-#~ book.addSource('https://ru.wikipedia.org/wiki/III_век')
-#~ book.addSource('https://ru.wikipedia.org/wiki/VI_век')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Иероним_Стридонский')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Тридентский_собор')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Эпоха_Возрождения')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Рейн_(река)')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Юлий_Цезарь')
-#~ book.addSource('https://ru.wikipedia.org/wiki/43')
-#book.addSource('https://ru.wikipedia.org/wiki/476')
-#~ book.addSource('https://ru.wikipedia.org/wiki/407')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Апулей')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Везалий,_Андреас')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Древние_германцы')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Сенека')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Марциал')
-#~ book.addSource('https://ru.wikipedia.org/wiki/1543')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Историк')
-#~ book.addSource('https://ru.wikipedia.org/wiki/Великобритания')
-
-##
-## кривое поведение на этой:
-##
-# book.addSource('https://ru.wikipedia.org/wiki/476')
-
-# ================ ДЛЯ ПРОВЕРОК ===============
+start_time = Time.now
 
 
-filter1 = {
+book = Book.new(
+	:metadata => {
+		:title => 'test book',
+		:author => 'разные авторы',
+		:language => 'ru',
+	},
+	:source => [
+		'https://ru.wikipedia.org/wiki/Самооценка',
+	],
+	:options => {
+		:depth => 5,
+		:total_pages => 15,
+		:pages_per_level =>3,
+		
+		:threads => 1,
+		:links_per_level => 5,
+		:db_type => 'f',
+	}
+)
+
+book.addFilter({
 	'opennet.ru' => {
 		'links' => [
 			'(www\.)?opennet\.ru\/opennews\/art\.shtml\?num=[\d]+'
@@ -933,13 +923,11 @@ filter1 = {
 			'ru\.wikipedia\.org\/wiki\/[^/]+' => "//div[@id='content']"
 		}
 	}
-}
-
-book.addFilter(filter1)
-
-start_time = Time.now
+})
 
 book.prepare()
+
 book.create('test-book.epub')
+
 
 puts "", "время выполнения: #{Time.now - start_time}"
