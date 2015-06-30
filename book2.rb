@@ -94,7 +94,7 @@ class Book
 
 	include Msg
 
-	attr_accessor :title, :author
+	attr_accessor :title, :author, :language
 	
 	# методы первого уровня
 	public
@@ -104,14 +104,21 @@ class Book
 
 		msg_info "#{__method__}('#{title}','#{author}')"
 		
-		@user_agent = 'Ruby/1.9.3, Contacts: aakumykov@yandex.ru'
+		@@script_name = File.basename(File.realpath(__FILE__)).split('.')[0]
 
 		# свойства книги
 		self.title = title.to_s.strip
 		self.author = author.to_s.strip.empty? ? 'неизвестный автор' : author
+		self.language = language.to_s.strip.empty? ? 'ru' : language
+		
+		@generator_name = @@script_name
+		@generator_version = '0.0.1a'
+		@id = SecureRandom.uuid
+
+		# сетевые настройки...
+		@user_agent = 'Ruby/1.9.3, Contacts: aakumykov@yandex.ru'
 
 		# каталоги
-		@@script_name = File.basename(File.realpath(__FILE__)).split('.')[0]
 		@work_dir = Dir.tmpdir + '/' + @@script_name
 		Dir.mkdir(@work_dir) if not Dir.exists?(@work_dir)
 		msg_debug("work_dir: #{@work_dir}")
@@ -339,10 +346,10 @@ QWERTY
 			{
 				:title=>@title, 
 				:author=>@author,
-				:language => 'ru',
-				:id => SecureRandom.uuid, 
-				:generator_name => @@script_name,
-				:generator_version => '0.0.1a',
+				:language => @language,
+				:id => @id, 
+				:generator_name => @generator_name,
+				:generator_version => @generator_version,
 			}
 		)
 	end
@@ -694,33 +701,60 @@ QWERTY
 		def MakeNcx(arg)
 			msg_debug "#{__method__}()"
 			
+			depth = arg[:depth].nil? ? 0 : arg[:depth]
 			bookArray = arg[:bookArray]
-			output = ''
+			metadata = arg[:metadata]
+			
+			navPoints = ''
 			
 			bookArray.each { |item|
 				id = Digest::MD5.hexdigest(item[:id])
-				playOrder = item[:id]
-				#puts "id: #{id}, playOrder: #{playOrder}"
 				
-				output += <<NCX
-<navPoint id='#{id}' playOrder='#{playOrder}'>
+				navPoints += <<NCX
+<navPoint id='#{id}' playOrder='#{depth}'>
 	<navLabel>
 		<text>#{item[:title]}</text>
 	</navLabel>
 <content src='#{item[:file]}'/>
 NCX
 				
-				output += self.MakeNcx(:bookArray => item[:childs]) if not item[:childs].empty?
+				navPoints += self.MakeNcx(
+							{
+								:bookArray => item[:childs], 
+								:depth => depth,
+								:metadata => metadata,
+							}
+						) if not item[:childs].empty?
 				
-				output += "</navPoint>\n"
+				navPoints += "</navPoint>\n"
+				
+				depth += 1
 			}
-				
-			return output
+
+			ncx = <<NCX_DATA
+<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+<ncx version="2005-1" xmlns="http://www.daisy.org/z3986/2005/ncx/">
+<head>
+	<meta content="FB2BookID" name="dtb:uid"/>
+	<meta content="1" name="dtb:#{depth}"/><!-- depth -->
+	<meta content="0" name="dtb:#{depth}"/><!-- pages count -->
+	<meta content="0" name="dtb:#{depth}"/><!-- max page number -->
+</head>
+<docTitle>
+	<text>#{metadata[:title]}</text>
+</docTitle>
+<navMap>#{navPoints}
+</navMap>
+</ncx>
+NCX_DATA
+
+			return ncx
 		end
 		
 		def MakeOpf(arg)
 			msg_debug "#{__method__}()"
 			
+			# manifest - опись содержимого
 			def makeManifest(bookArray)
 				msg_debug "#{__method__}()"
 				
@@ -737,6 +771,7 @@ MANIFEST
 				return output
 			end
 			
+			# spine - порядок пролистывания
 			def makeSpine(bookArray)
 				msg_debug "#{__method__}()"
 				
@@ -751,6 +786,7 @@ MANIFEST
 				return output
 			end
 			
+			# guide - это семантика файлов
 			def makeGuide(bookArray)
 				msg_debug "#{__method__}()"
 				
@@ -792,15 +828,22 @@ OPF_DATA
 			return opf
 		end
 		
-		ncxData = MakeNcx(:bookArray => bookArray)
-		puts '=================================== NCX =================================='
+		ncxData = MakeNcx(
+			:bookArray => bookArray,
+			:metadata => metadata, 
+		)
+		puts "\n=================================== NCX =================================="
 		puts ncxData
 		
-		opfData = MakeOpf(:metadata => metadata, :bookArray => bookArray)
-		puts '=================================== OPF =================================='
+		opfData = MakeOpf(
+			:bookArray => bookArray,
+			:metadata => metadata, 
+		)
+		puts "\n=================================== OPF =================================="
 		puts opfData
 		
-		File.open('/home/andrey/Desktop/1.xml','w') { |file| file.write(opfData) }
+		File.open('/home/andrey/Desktop/ncx.xml','w') { |file| file.write(ncxData) }
+		File.open('/home/andrey/Desktop/opf.xml','w') { |file| file.write(opfData) }
 	end
 
 
