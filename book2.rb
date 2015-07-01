@@ -124,7 +124,9 @@ class Book
 		
 		# объединение с пользовательскими настройками
 		@metadata.merge!(arg[:metadata]) if not arg[:metadata].nil?
-		@metadata.merge!(arg[:option]) if not arg[:option].nil?
+		
+		@options.merge!(arg[:options]) if not arg[:options].nil?
+		
 		if not arg[:source].nil? then
 			@source += arg[:source]
 			@source.uniq!
@@ -207,19 +209,10 @@ QWERTY
 		
 		# внтуренние переменные (куда их?)
 		@current_depth = 0
-		@target_depth = 0
-		@target_depth = @options[:depth].to_i if not @options[:depth].nil?
 		
 		@page_count = 0 
 		@page_limit = 0		# 0 (zero) disables this limit
 		@page_limit = @options[:total_pages].to_i if not @options[:total_pages].nil?
-		
-		@pages_per_level = 0 # 0 == unlimited
-		@pages_per_level = @options[:pages_per_level] if not @options[:pages_per_level].nil?
-		
-		# links_per_level нужен на период тестирования для ограничения нагрузки на файловую БД
-		@links_per_level = 0 # 0 == unlimited
-		@links_per_level = @options[:links_per_level] if not @options[:links_per_level].nil?
 		
 		@errors_count = 0
 		@errors_limit = 100
@@ -266,7 +259,7 @@ QWERTY
 			msg_debug "CURRENT: pages #{@page_count}, depth #{@current_depth}"
 			
 			# брать порцию ссылок
-			links = getFreshLinks(@current_depth, @threads)
+			links = getFreshLinks(@current_depth, @options[:threads])
 			
 			# и обрабатывать (в потоках)
 			threads = []
@@ -322,12 +315,12 @@ QWERTY
 			@current_depth += 1 if not freshLinksExists?(@current_depth)
 
 			if depthComplete?(@current_depth) then
-				msg_info_green "на уровне #{@current_depth} обработаны все страницы (#{@pages_per_level})"
+				msg_info_green "на уровне #{@current_depth} обработаны все страницы (#{@options[:pages_per_level]})"
 				@current_depth += 1
 			end
 			
 			# пауза перед следующей порцией
-			if @threads > 5 then
+			if @options[:threads] > 5 then
 				print "Ждём 5 секунд";
 				4.times { sleep 1 and print '.' };
 				sleep 1 and puts '.'
@@ -390,14 +383,12 @@ QWERTY
 	private
 	
 	def prepareComplete?
-	
-		#return @current_depth == @target_depth
 		
 		if  not freshLinksExists?(@current_depth) then
 			reason = "все ссылки обработаны"
 		
-		elsif @current_depth > @target_depth then
-			reason = "достигнута глубина #{@target_depth}"
+		elsif @current_depth > @options[:depth] then
+			reason = "достигнута глубина #{@options[:depth]}"
 		
 		elsif @errors_count > @errors_limit then
 			reason = "достигнут максимум ошибок (#{@errors_limit})"
@@ -431,11 +422,11 @@ QWERTY
 		
 		res = @db.prepare(q).execute(depth)
 		
-		return ( res.count >= @pages_per_level and 0 != @pages_per_level )
+		return ( res.count >= @options[:pages_per_level] and 0 != @options[:pages_per_level] )
 	end
 
 	def getFreshLinks ( depth, amount )
-		msg_info "#{__method__}(#{depth},#{amount})"
+		msg_debug "#{__method__}(#{depth},#{amount})"
 		
 		q = "SELECT * FROM #{@table_name} WHERE status='fresh' AND depth=#{depth} LIMIT #{amount}"
 		res = @db.execute(q)
@@ -612,7 +603,7 @@ QWERTY
 		count = 0
 		all_links.each { |item|
 		
-			break if @links_per_level != 0 and count > @links_per_level
+			break if @options[:links_per_level] != 0 and count > @options[:links_per_level]
 			
 			next if item.match(/^mailto:/)
 			next if item.match(/action=edit/)
@@ -897,7 +888,7 @@ book = Book.new(
 	],
 	:options => {
 		:depth => 5,
-		:total_pages => 15,
+		:total_pages => 16,
 		:pages_per_level =>3,
 		
 		:threads => 1,
@@ -926,9 +917,9 @@ book.addFilter({
 	}
 })
 
-#book.prepare()
+book.prepare()
 
-#book.create('test-book.epub')
+book.create('test-book.epub')
 
 
 puts "", "время выполнения: #{Time.now - start_time}"
