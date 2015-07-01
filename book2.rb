@@ -102,9 +102,7 @@ class Book
 	# настроить
 	def initialize(arg)
 	
-		# определение имени скрипта
-		@@script_name = File.basename(File.realpath(__FILE__)).split('.')[0]
-
+		# ~~ преимущественно статическая настройка
 	
 		# настройки по умолчанию
 		@metadata = {
@@ -122,8 +120,9 @@ class Book
 			:db_type => 'm',
 		}
 		@source = []
+		@filters = {}
 		
-		# объединение начальных настроек с пользовательскими
+		# объединение с пользовательскими настройками
 		@metadata.merge!(arg[:metadata]) if not arg[:metadata].nil?
 		@metadata.merge!(arg[:option]) if not arg[:option].nil?
 		if not arg[:source].nil? then
@@ -132,72 +131,53 @@ class Book
 		end
 
 		# добавление внутренних настроек
+		@@script_name = File.basename(File.realpath(__FILE__)).split('.')[0]
+		
 		@metadata.merge!({
 			:generator_name => @@script_name,
 			:generator_version => '0.0.1a',
 			:id => SecureRandom.uuid,
 		})
-
+		
+		@options.merge!({
+			:user_agent => 'Ruby/1.9.3, Contacts: aakumykov@yandex.ru'
+		})
 
 		# каталоги
 		@work_dir = Dir.tmpdir + '/' + @@script_name
-		Dir.mkdir(@work_dir) if not Dir.exists?(@work_dir)
-		msg_debug("work_dir: #{@work_dir}")
-
 		@book_dir = @work_dir + '/' + @metadata[:title].gsub(/\s/,'_')
-		Dir.mkdir(@book_dir) if not Dir.exists?(@book_dir)
-
-		# сетевые настройки...
-		@user_agent = 'Ruby/1.9.3, Contacts: aakumykov@yandex.ru'
-
-
-		# удаляю старые файлы
-		Dir.new(@book_dir).each { |item| File.delete "#{@book_dir}/#{item}" if item.match(/\.html/) }
 		
-		# журнал ошибок
+		# файлы журналов
 		@error_log = "errors-#{@@script_name}.log"
 		@alert_log = "alerts-#{@@script_name}.log"
 		
-		File.delete(@error_log) if File.exists?(@error_log)
-		File.delete(@alert_log) if File.exists?(@alert_log)
-
-		# временное решение
-		@filters = {}
-
-		
-		# внтуренние переменные (сделать их private?)
-		@current_depth = 0
-		@target_depth = 0
-		@target_depth = @options[:depth].to_i if not @options[:depth].nil?
-		
-		@page_count = 0 
-		@page_limit = 0		# 0 (zero) disables this limit
-		@page_limit = @options[:total_pages].to_i if not @options[:total_pages].nil?
-		
-		@pages_per_level = 0 # 0 == unlimited
-		@pages_per_level = @options[:pages_per_level] if not @options[:pages_per_level].nil?
-		
-		# параметр нужен на период тестирования для ограничения нагрузки на файловую БД
-		@links_per_level = 0 # 0 == unlimited
-		@links_per_level = @options[:links_per_level] if not @options[:links_per_level].nil?
-		
-		@errors_count = 0
-		@errors_limit = 100
-		
-		@alerts_count = 0 # только для информации
-		@alerts_limit = 0 # пока не используется
-		
-		@timeout_limit = 60
-		
-		case @options[:db_type] 
-		when 'f'
-			@db_name = 'db_' + @@script_name + '.sqlite'
-		else
-			@db_name = ':memory:'
-		end
-		
+		# БД имена
+		@db_name = ('m' == @options[:db_type] ) ? ':memory:' : 'db_' + @@script_name + '.sqlite'
 		@table_name = 'book_info'
 
+		
+		# ~~ преимущественно динамическая настройка
+
+		# создаю каталоги
+		Dir.mkdir(@work_dir) if not Dir.exists?(@work_dir) \
+		and msg_debug("work_dir: #{@work_dir}")
+
+		Dir.mkdir(@book_dir) if not Dir.exists?(@book_dir) \
+		and msg_debug("work_dir: #{@book_dir}")
+
+		# удаляю старые файлы
+		Dir.new(@book_dir).each { |item| 
+			File.delete "#{@book_dir}/#{item}" if item.match(/\.html/) \
+			and msg_debug("удалён #{item}")
+		}
+
+		File.delete(@error_log) if File.exists?(@error_log) \
+		and msg_debug("удалён #{@error_log}")
+		
+		File.delete(@alert_log) if File.exists?(@alert_log) \
+		and msg_debug("удалён #{@alert_log}")
+		
+		# настраиваю БД
 		table_def = <<QWERTY
 CREATE TABLE #{@table_name} 
 (
@@ -213,19 +193,41 @@ CREATE TABLE #{@table_name}
 QWERTY
 
 		@db = SQLite3::Database.new(@db_name)
-		
 		@db.results_as_hash = true
 		
 		@db.query("PRAGMA journal_mode=OFF")
-		
 		@db.query("DROP TABLE IF EXISTS #{@table_name}")
-		
 		@db.query(table_def)
 		
-		
+		# сохраняю источники в БД
 		@source.each { |src|
 			self.addSource(src)
 		}
+		
+		
+		# внтуренние переменные (куда их?)
+		@current_depth = 0
+		@target_depth = 0
+		@target_depth = @options[:depth].to_i if not @options[:depth].nil?
+		
+		@page_count = 0 
+		@page_limit = 0		# 0 (zero) disables this limit
+		@page_limit = @options[:total_pages].to_i if not @options[:total_pages].nil?
+		
+		@pages_per_level = 0 # 0 == unlimited
+		@pages_per_level = @options[:pages_per_level] if not @options[:pages_per_level].nil?
+		
+		# links_per_level нужен на период тестирования для ограничения нагрузки на файловую БД
+		@links_per_level = 0 # 0 == unlimited
+		@links_per_level = @options[:links_per_level] if not @options[:links_per_level].nil?
+		
+		@errors_count = 0
+		@errors_limit = 100
+		
+		@alerts_count = 0 # только для информации
+		@alerts_limit = 0 # пока не используется
+		
+		@timeout_limit = 60
 	end
 
 	def addSource(uri)
@@ -246,11 +248,11 @@ QWERTY
 	end
 	
 	def addFilter(filter)
-		msg_info "#{__method__}(#{filter.keys})"
+		msg_info "#{__method__} for '#{filter.keys.join(', ')}'"
 		
 		@filters.merge!(filter)
 		
-		#pp @filters
+		#msg_debug @filters
 	end
 
 	def prepare()
@@ -447,7 +449,7 @@ QWERTY
 		msg_info_blue "#{__method__}('#{uri.urlencoded? ? URI::decode(uri) : uri}')"
 		
 		curl = CURL.new
-		curl.user_agent = @user_agent
+		curl.user_agent = @options[:user_agent]
 		page = curl.get(uri)
 
 		return page
@@ -468,8 +470,7 @@ QWERTY
 	end
 	
 	def saveLink(id, parent_id, depth, uri)
-		#msg_info "#{__method__}(#{id}, #{parent_id}, #{depth}, #{uri})"
-		#msg_info "#{__method__}(#{uri})"
+		msg_debug "#{__method__}(#{id}, #{parent_id}, #{depth}, #{uri})"
 		
 		uri = URI::encode(uri) if not uri.urlencoded?
 		
@@ -925,9 +926,9 @@ book.addFilter({
 	}
 })
 
-book.prepare()
+#book.prepare()
 
-book.create('test-book.epub')
+#book.create('test-book.epub')
 
 
 puts "", "время выполнения: #{Time.now - start_time}"
