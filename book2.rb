@@ -721,38 +721,41 @@ QWERTY
 		puts "\n=================================== bookArray =================================="
 		ap bookArray
 		
+		# arg = { :bookArray, :metadata }
 		def MakeNcx(arg)
 			msg_debug "#{__method__}()"
-			
-			depth = arg[:depth].nil? ? 0 : arg[:depth]
-			bookArray = arg[:bookArray]
-			metadata = arg[:metadata]
-			
-			navPoints = ''
-			
-			bookArray.each { |item|
-				id = Digest::MD5.hexdigest(item[:id])
+		
+			# arg = { :bookArray, :depth }
+			def MakeNavPoint(bookArray, depth)
 				
-				navPoints += <<NCX
+				navPoints = ''
+				
+				bookArray.each { |item|
+					id = Digest::MD5.hexdigest(item[:id])
+					
+					navPoints += <<NCX
 <navPoint id='#{id}' playOrder='#{depth}'>
 	<navLabel>
 		<text>#{item[:title]}</text>
 	</navLabel>
 <content src='#{item[:file]}'/>
 NCX
+					
+					navPoints += MakeNavPoint(item[:childs], depth)[:xml_tree] if not item[:childs].empty?
+					
+					navPoints += "</navPoint>\n"
+					
+					depth += 1
+				}
 				
-				navPoints += self.MakeNcx(
-							{
-								:bookArray => item[:childs], 
-								:depth => depth,
-								:metadata => metadata,
-							}
-						) if not item[:childs].empty?
-				
-				navPoints += "</navPoint>\n"
-				
-				depth += 1
-			}
+				return { 
+					:xml_tree => navPoints,
+					:depth => depth,
+				}
+			end
+
+			data = MakeNavPoint(arg[:bookArray], 0)
+			metadata = arg[:metadata]
 
 			ncx = <<NCX_DATA
 <?xml version="1.0" encoding="utf-8"?>
@@ -760,14 +763,14 @@ NCX
 <ncx version="2005-1" xmlns="http://www.daisy.org/z3986/2005/ncx/">
 <head>
 	<meta content="FB2BookID" name="dtb:uid"/>
-	<meta content="1" name="dtb:#{depth}"/><!-- depth -->
-	<meta content="0" name="dtb:#{depth}"/><!-- pages count -->
-	<meta content="0" name="dtb:#{depth}"/><!-- max page number -->
+	<meta content="1" name="dtb:#{data[:depth]}"/><!-- depth -->
+	<meta content="0" name="dtb:#{data[:depth]}"/><!-- pages count -->
+	<meta content="0" name="dtb:#{data[:depth]}"/><!-- max page number -->
 </head>
 <docTitle>
 	<text>#{metadata[:title]}</text>
 </docTitle>
-<navMap>#{navPoints}
+<navMap>#{data[:xml_tree]}
 </navMap>
 </ncx>
 NCX_DATA
