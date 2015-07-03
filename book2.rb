@@ -125,6 +125,9 @@ class Book
 		@work_dir = Dir.tmpdir + '/' + @@script_name
 		@book_dir = @work_dir + '/' + @metadata[:title].gsub(/\s/,'_')
 		
+		@text_dir = 'Text'
+		@image_dir = 'Images'
+		
 		# файлы журналов
 		@error_log = "errors-#{@@script_name}.log"
 		@alert_log = "alerts-#{@@script_name}.log"
@@ -723,7 +726,7 @@ QWERTY
 	<navLabel>
 		<text>#{item[:title]}</text>
 	</navLabel>
-<content src='#{item[:file_name]}'/>
+	<content src='#{@tex_dir}/#{item[:file_name]}'/>
 NCX
 					
 					navPoints += MakeNavPoint(item[:childs], depth)[:xml_tree] if not item[:childs].empty?
@@ -775,7 +778,7 @@ NCX_DATA
 				bookArray.each{ |item|
 					id = Digest::MD5.hexdigest(item[:id])
 					output += <<MANIFEST
-	<item href='#{item[:file_name]}' id='#{id}'  media-type='application/xhtml+xml' />
+	<item href='#@text_dir}/#{item[:file_name]}' id='#{id}'  media-type='application/xhtml+xml' />
 MANIFEST
 					output += self.makeManifest(item[:childs]) if not item[:childs].empty?
 				}
@@ -805,7 +808,7 @@ MANIFEST
 				output = ''
 				
 				bookArray.each { |item|
-					output += "\n\t<reference href='#{item[:file_name]}' title='#{item[:title]}' type='text' />"
+					output += "\n\t<reference href='#{@text_dir}/#{item[:file_name]}' title='#{item[:title]}' type='text' />"
 					output += self.makeGuide(item[:childs]) if not item[:childs].empty?
 				}
 				
