@@ -161,11 +161,11 @@ class Book
 		# ~~ преимущественно динамическая настройка
 
 		# создаю каталоги
-		Dir.mkdir(@work_dir) if not Dir.exists?(@work_dir) \
-		and msg_debug("work_dir: #{@work_dir}")
+		( Dir.mkdir(@work_dir) if not Dir.exists?(@work_dir) ) \
+		and msg_info_cyan("work_dir: #{@work_dir}")
 
-		Dir.mkdir(@book_dir) if not Dir.exists?(@book_dir) \
-		and msg_debug("work_dir: #{@book_dir}")
+		( Dir.mkdir(@book_dir) if not Dir.exists?(@book_dir)  ) \
+		and msg_info_cyan("book_dir: #{@book_dir}")
 
 		# удаляю старые файлы
 		Dir.new(@book_dir).each { |item| 
