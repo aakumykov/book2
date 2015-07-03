@@ -1,30 +1,6 @@
 #!/usr/bin/env ruby
 # coding: utf-8
 
-# СДЕЛАТЬ:
-# * упорядочить public / private
-# * escapeshell{arg,cmd}
-#
-# Вопросы для решения:
-# * индивидуальная обработка глубины каждого источника
-# * дубликаты ссылок в БД
-# * производительность БД
-# * нормализация URI (для использования в качестве хэша)
-# * жизнь кодировок
-# * вывод ошибок в stderr
-# * при ошибке сохранения ссылки всё равно устанавливается статус 'processed'
-#
-# ОШИБКИ:
-# * знак # кодируется в %23, который потом не срабатывает при открытии ссылки
-#
-# ОСОБЕННОСТИ:
-# * ранжирование фильтров по частоте срабатывания
-#
-# ЖУРНАЛ ИЗМЕНЕНИЙ:
-# * 2015.06.21 переписал collectLinks(); перевёл с SimpleURI обратно на URI; исключил из обработки ссылки с 'action=edit'
-#
-#
-
 system 'clear'
 
 require 'rubygems'
@@ -190,7 +166,8 @@ CREATE TABLE #{@table_name}
 	uri TEXT,
 	archor_name TEXT,
 	title TEXT,
-	file TEXT
+	file_name TEXT,
+	file_path TEXT
 )
 QWERTY
 
@@ -341,7 +318,7 @@ QWERTY
 				list << {
 					:id => row['id'],
 					:title => row['title'],
-					:file => row['file'],
+					:file_name => row['file_name'],
 					:uri => row['uri'],
 					:childs => getTocItems(row['id'])
 				}
@@ -493,12 +470,13 @@ QWERTY
 		title = arg[:title]
 		page_body = arg[:body]
 		
-		file_name = @book_dir+"/"+arg[:id]+".html"
+		file_name = arg[:id] + ".html"
+		file_path = @book_dir + "/" + file_name
 		
 		msg_info "#{__method__}('#{title}', '#{file_name}'), body size: #{page_body.size}"
 
 		begin
-			File.open(file_name,'w') { |file|
+			File.open(file_path,'w') { |file|
 			file.write <<QWERTY
  <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
      "http://www.w3.org/TR/html4/loose.dtd">
@@ -514,14 +492,21 @@ QWERTY
 QWERTY
 		}
 		rescue
-			msg_error "запись #{title} в файл #{file_name}"
+			msg_error "запись #{title} в файл #{file_path}"
 		end
-		
+
+
 		begin
-			q = "UPDATE #{@table_name} SET file='#{file_name}' WHERE id='#{id}'"
-			@db.query(q)
+			@db.prepare("UPDATE #{@table_name} SET file_path=? WHERE id=? ").execute(file_path, id)
 		rescue
-			msg_error "сохранение в БД имени файла (#{file_name}) для '#{title}'"
+			msg_error "сохранение в БД file_path='#{file_path}') для '#{title}'"
+		end
+
+
+		begin
+			@db.prepare("UPDATE #{@table_name} SET file_name=? WHERE id=? ").execute(file_name, id)
+		rescue
+			msg_error "сохранение в БД file_name='#{file_name}' для '#{title}'"
 		end
 	end
 	
@@ -738,7 +723,7 @@ QWERTY
 	<navLabel>
 		<text>#{item[:title]}</text>
 	</navLabel>
-<content src='#{item[:file]}'/>
+<content src='#{item[:file_name]}'/>
 NCX
 					
 					navPoints += MakeNavPoint(item[:childs], depth)[:xml_tree] if not item[:childs].empty?
@@ -790,7 +775,7 @@ NCX_DATA
 				bookArray.each{ |item|
 					id = Digest::MD5.hexdigest(item[:id])
 					output += <<MANIFEST
-	<item href='#{item[:uri]}' id='#{id}'  media-type='application/xhtml+xml' />
+	<item href='#{item[:file_name]}' id='#{id}'  media-type='application/xhtml+xml' />
 MANIFEST
 					output += self.makeManifest(item[:childs]) if not item[:childs].empty?
 				}
@@ -820,7 +805,7 @@ MANIFEST
 				output = ''
 				
 				bookArray.each { |item|
-					output += "\n\t<reference href='#{item[:file]}' title='#{item[:title]}' type='text' />"
+					output += "\n\t<reference href='#{item[:file_name]}' title='#{item[:title]}' type='text' />"
 					output += self.makeGuide(item[:childs]) if not item[:childs].empty?
 				}
 				
@@ -836,20 +821,21 @@ MANIFEST
 			opf = <<OPF_DATA
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="2.0">
-  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
-    <dc:identifier id="BookId" opf:scheme="UUID">urn:uuid:#{metadata[:id]}</dc:identifier>
-    <dc:title>#{metadata[:title]}</dc:title>
-    <dc:creator opf:role="aut">#{metadata[:author]}</dc:creator>
-    <dc:language>#{metadata[:language]}</dc:language>
-    <meta name="#{metadata[:generator_name]}" content="#{metadata[:generator_version]}" />
-  </metadata>
-  <manifest>#{manifest}
-	<item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml" />
-  </manifest>
-  <spine toc="ncx">#{spine}
-  </spine>
-  <guide>#{guide}
-  </guide>
+	<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+		<dc:identifier id="BookId" opf:scheme="UUID">urn:uuid:#{metadata[:id]}</dc:identifier>
+		<dc:title>#{metadata[:title]}</dc:title>
+		<dc:creator opf:role="aut">#{metadata[:author]}</dc:creator>
+		<dc:language>#{metadata[:language]}</dc:language>
+		<meta name="#{metadata[:generator_name]}" content="#{metadata[:generator_version]}" />
+	</metadata>
+	<manifest>
+#{manifest}
+		<item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml" />
+	</manifest>
+	<spine toc="ncx">#{spine}
+	</spine>
+	<guide>#{guide}
+	</guide>
 </package>
 OPF_DATA
 			return opf
