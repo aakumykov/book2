@@ -315,32 +315,29 @@ QWERTY
 	def getBookStructure
 		msg_debug "#{__method__}()"
 		
-		def getTocItems(id)
+		def getTocItems(parent_id)
+			
 			list = []
-			res = @db.prepare("SELECT * FROM #{@table_name} WHERE parent_id=? AND status='processed'").execute(id)
+			
+			res = @db.prepare("SELECT * FROM #{@table_name} WHERE parent_id=? AND status='processed'").execute(parent_id)
+			
 			res.each { |row|
 				list << {
 					:id => row['id'],
+					:parent_id => row['parent_id'],
 					:title => row['title'],
 					:file_name => row['file_name'],
 					:uri => row['uri'],
 					:childs => getTocItems(row['id'])
 				}
 			}
+			
 			return list
 		end
 
-		res = @db.query("SELECT * FROM #{@table_name} WHERE depth=0 AND status='processed'")
-		
-		if 0 == res.count then
-			msg_alert "похоже, что книга пуста"
-			return {}
-		else
-			res.reset # ВАЖНО: сбрасывается курсор после 'res.count'
-			root_id = res.next['id']
-			return getTocItems(root_id)
-		end
+		return getTocItems(0)
 	end
+	
 	
 	def create(file='')
 		msg_info "#{__method__}(#{file})"
