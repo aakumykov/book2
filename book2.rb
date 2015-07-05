@@ -315,11 +315,11 @@ QWERTY
 	def getBookStructure
 		msg_debug "#{__method__}()"
 		
-		def getTocItems(parent_id)
+		def getTocItems(arg)
 			
 			list = []
 			
-			res = @db.prepare("SELECT * FROM #{@table_name} WHERE parent_id=? AND status='processed'").execute(parent_id)
+			res = @db.prepare("SELECT * FROM #{@table_name} WHERE parent_id=? AND status='processed'").execute(arg[:parent_id])
 			
 			res.each { |row|
 				list << {
@@ -328,14 +328,14 @@ QWERTY
 					:title => row['title'],
 					:file_name => row['file_name'],
 					:uri => row['uri'],
-					:childs => getTocItems(row['id'])
+					:childs => getTocItems(:parent_id => row['id'])
 				}
 			}
 			
 			return list
 		end
 
-		return getTocItems(0)
+		return getTocItems(:parent_id => 0)
 	end
 	
 	
