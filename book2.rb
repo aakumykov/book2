@@ -766,6 +766,7 @@ NCX_DATA
 			return ncx
 		end
 		
+		# arg = { :bookArray, :metadata }
 		def MakeOpf(arg)
 			msg_debug "#{__method__}()"
 			
@@ -778,7 +779,7 @@ NCX_DATA
 				bookArray.each{ |item|
 					id = Digest::MD5.hexdigest(item[:id])
 					output += <<MANIFEST
-	<item href='#@text_dir}/#{item[:file_name]}' id='#{id}'  media-type='application/xhtml+xml' />
+	<item href='#{@text_dir}/#{item[:file_name]}' id='#{id}'  media-type='application/xhtml+xml' />
 MANIFEST
 					output += self.makeManifest(item[:childs]) if not item[:childs].empty?
 				}
@@ -844,22 +845,50 @@ OPF_DATA
 			return opf
 		end
 		
-		ncxData = MakeNcx(
-			:bookArray => bookArray,
-			:metadata => metadata, 
-		)
-		puts "\n=================================== NCX =================================="
-		puts ncxData
 		
-		opfData = MakeOpf(
-			:bookArray => bookArray,
-			:metadata => metadata, 
-		)
-		puts "\n=================================== OPF =================================="
-		puts opfData
+		# создание дерева каталогов под epub-книгу
+		epub_dir = @book_dir + '/' + 'epub'
+		Dir.mkdir(epub_dir)
+		Dir.mkdir(epub_dir + '/META-INF')
+		Dir.mkdir(epub_dir + '/OEBPS')
+		Dir.mkdir(epub_dir + '/OEBPS/Text')
+		
+		# создание служебных(?) файлов
+		File.open(epub_dir + '/mimetype','w') { |file|
+			file.write('application/epub+zip')
+		}
+		File.open(epub_dir + '/META-INF/container.xml','w') { |file|
+			file.write <<DATA
+<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+    <rootfiles>
+        <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+   </rootfiles>
+</container>
+DATA
+		}
+		
+		# создание и запись NCX и OPF
+		ncxData = MakeNcx(:bookArray => bookArray,:metadata => metadata)
+		opfData = MakeOpf(:bookArray => bookArray,:metadata => metadata)
+		
+		File.open(epub_dir + '/OEBPS/toc.ncx','w') { |file|
+			file.write(ncxData)
+		}
+		
+		File.open(epub_dir + '/OEBPS/content.opf','w') { |file|
+			file.write(opfData)
+		}
+		
+		msg_debug "\n=================================== NCX =================================="
+		msg_debug ncxData
+		msg_debug "\n=================================== OPF =================================="
+		msg_debug opfData
 		
 		File.open('/home/andrey/Desktop/ncx.xml','w') { |file| file.write(ncxData) }
 		File.open('/home/andrey/Desktop/opf.xml','w') { |file| file.write(opfData) }
+		
+		
 	end
 
 
@@ -880,7 +909,7 @@ book = Book.new(
 	],
 	:options => {
 		:depth => 5,
-		:total_pages => 16,
+		:total_pages => 2,
 		:pages_per_level =>3,
 		
 		:threads => 1,
