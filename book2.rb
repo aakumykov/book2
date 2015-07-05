@@ -9,6 +9,7 @@ require 'sqlite3'
 require 'securerandom'
 require 'digest/md5'
 require 'tmpdir'
+require 'fileutils'
 require 'nokogiri'
 require 'curl'	# must be before 'colorize'
 require 'colorize'	# must be after 'curl' for right colors
@@ -379,7 +380,8 @@ QWERTY
 		else
 			return false
 		end
-
+		
+		msg_info "============== #{reason} =============="
 		return true
 	end
 
@@ -485,7 +487,7 @@ QWERTY
      "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
-<meta http-equiv='Content-Type' Content='text/html;charset=UTF-8'>
+<meta http-equiv='Content-Type' Content='text/html;charset=UTF-8'/>
 <title>#{title}</title>
 </head>
 <body>
@@ -726,7 +728,7 @@ QWERTY
 	<navLabel>
 		<text>#{item[:title]}</text>
 	</navLabel>
-	<content src='#{@tex_dir}/#{item[:file_name]}'/>
+	<content src='#{@text_dir}/#{item[:file_name]}'/>
 NCX
 					
 					navPoints += MakeNavPoint(item[:childs], depth)[:xml_tree] if not item[:childs].empty?
@@ -756,10 +758,10 @@ NCX
 	<meta content="0" name="dtb:#{data[:depth]}"/><!-- max page number -->
 </head>
 <docTitle>
-	<text>#{metadata[:title]}</text>
+	<text>#{@metadata[:title]}</text>
 </docTitle>
-<navMap>#{data[:xml_tree]}
-</navMap>
+<navMap>
+#{data[:xml_tree]}</navMap>
 </ncx>
 NCX_DATA
 
@@ -826,11 +828,11 @@ MANIFEST
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="2.0">
 	<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
-		<dc:identifier id="BookId" opf:scheme="UUID">urn:uuid:#{metadata[:id]}</dc:identifier>
-		<dc:title>#{metadata[:title]}</dc:title>
-		<dc:creator opf:role="aut">#{metadata[:author]}</dc:creator>
-		<dc:language>#{metadata[:language]}</dc:language>
-		<meta name="#{metadata[:generator_name]}" content="#{metadata[:generator_version]}" />
+		<dc:identifier id="BookId" opf:scheme="UUID">urn:uuid:#{@metadata[:id]}</dc:identifier>
+		<dc:title>#{@metadata[:title]}</dc:title>
+		<dc:creator opf:role="aut">#{@metadata[:author]}</dc:creator>
+		<dc:language>#{@metadata[:language]}</dc:language>
+		<meta name="#{@metadata[:generator_name]}" content="#{@metadata[:generator_version]}" />
 	</metadata>
 	<manifest>
 #{manifest}
@@ -848,6 +850,13 @@ OPF_DATA
 		
 		# создание дерева каталогов под epub-книгу
 		epub_dir = @book_dir + '/' + 'epub'
+		
+		begin
+			FileUtils.rm_rf(epub_dir)
+		rescue
+			raise "Не могу удалить '#{epub_dir}' с подкаталогами"
+		end	
+		
 		Dir.mkdir(epub_dir)
 		Dir.mkdir(epub_dir + '/META-INF')
 		Dir.mkdir(epub_dir + '/OEBPS')
@@ -909,11 +918,11 @@ book = Book.new(
 	],
 	:options => {
 		:depth => 5,
-		:total_pages => 2,
-		:pages_per_level =>3,
+		:total_pages => 3,
+		:pages_per_level =>1,
 		
 		:threads => 1,
-		:links_per_level => 5,
+		:links_per_level => 3,
 		:db_type => 'f',
 	}
 )
