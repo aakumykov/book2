@@ -850,17 +850,20 @@ OPF_DATA
 		
 		# создание дерева каталогов под epub-книгу
 		epub_dir = @book_dir + '/' + 'epub'
+		meta_dir = epub_dir + '/META-INF'
+		oebps_dir = epub_dir + '/OEBPS'
+		oebps_text_dir = oebps_dir + '/Text'
 		
-		begin
-			FileUtils.rm_rf(epub_dir)
-		rescue
-			raise "Не могу удалить '#{epub_dir}' с подкаталогами"
-		end	
+		#~ begin
+			#~ FileUtils.rm_rf(epub_dir)
+		#~ rescue
+			#~ raise "Не могу удалить '#{epub_dir}' с подкаталогами"
+		#~ end
 		
-		Dir.mkdir(epub_dir)
-		Dir.mkdir(epub_dir + '/META-INF')
-		Dir.mkdir(epub_dir + '/OEBPS')
-		Dir.mkdir(epub_dir + '/OEBPS/Text')
+		Dir.mkdir(epub_dir) if not Dir.exists?(epub_dir)
+		Dir.mkdir(meta_dir) if not Dir.exists?(meta_dir)
+		Dir.mkdir(oebps_dir) if not Dir.exists?(oebps_dir)
+		Dir.mkdir(oebps_text_dir) if not Dir.exists?(oebps_text_dir)
 		
 		# создание служебных(?) файлов
 		File.open(epub_dir + '/mimetype','w') { |file|
