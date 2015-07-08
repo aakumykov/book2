@@ -9,6 +9,7 @@ require 'sqlite3'
 require 'securerandom'
 require 'digest/md5'
 require 'tmpdir'
+require 'tempfile'
 require 'fileutils'
 require 'nokogiri'
 require 'curl'	# must be before 'colorize'
@@ -423,6 +424,13 @@ QWERTY
 		page = curl.get(uri)
 
 		return page
+	end
+	
+	def tidyPage input_file
+		stdin, stdout, stderr = Open3.popen3 "tidy -utf8 -numeric -quiet -asxhtml --drop-proprietary-tags yes --force-output yes --doctype omit #{input_file}"
+		output   = stdout.read.strip
+		warnings = stderr.read.split("\n").select {|line| line =~ /line \d+ column \d+ - Warning:/ }
+		return output
 	end
 	
 	def extractLinks(html_data,uri,filter='')
