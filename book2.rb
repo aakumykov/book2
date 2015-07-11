@@ -264,11 +264,17 @@ QWERTY
 					# обрежешь и сохранишь страницу
 					page_body = extractBody(source_page,source_uri)
 					
+					# скомпонуешь новую html-страницу
+					new_page = composePage(page_title,page_body)
+					
+					# подчистишь и превратишь в xhtml
+					new_page = tidyPage(new_page)
+					
 					# сохранишь страницу
 					savePage({
 						:id => source_id,
 						:title => page_title,
-						:body => page_body,
+						:data => new_page,
 					})
 					
 					# выделишь и сохранишь ссылки
@@ -475,20 +481,9 @@ QWERTY
 		end
 	end
 	
-	def savePage(arg)
-		id = arg[:id]
-		title = arg[:title]
-		page_body = arg[:body]
-		
-		file_name = arg[:id] + ".html"
-		file_path = @book_dir + "/" + file_name
-		
-		msg_info "#{__method__}('#{title}', '#{file_name}'), body size: #{page_body.size}"
-
-		begin
-			File.open(file_path,'w') { |file|
-			file.write <<QWERTY
- <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	def composePage(title,body)
+		return <<DATA
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
      "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
@@ -496,10 +491,25 @@ QWERTY
 <title>#{title}</title>
 </head>
 <body>
-#{page_body}
+#{body}
 </body>
 </html>
-QWERTY
+DATA
+	end
+	
+	def savePage(arg)
+		id = arg[:id]
+		title = arg[:title]
+		data = arg[:data]
+		
+		file_name = arg[:id] + ".html"
+		file_path = @book_dir + "/" + file_name
+		
+		msg_info "#{__method__}('#{title}', '#{file_name}'), data size: #{data.size}"
+
+		begin
+			File.open(file_path,'w') { |file|
+			file.write(data)
 		}
 		rescue
 			msg_error "запись #{title} в файл #{file_path}"
@@ -680,9 +690,12 @@ QWERTY
 		return selected_links
 	end
 	
-# /html/body/table[1]/tbody/tr/td[2]/table/tbody/tr/td/table
-# html body table tbody tr td table.ttxt tbody tr td table
-
+	def tidyPage(html_data)
+		i,o,e,t = Open3.popen3("tidy -numeric -utf8 -asxhtml -quiet --drop-proprietary-attributes yes --force-output yes --doctype omit")
+		i.puts html_data
+		i.close
+		o.read
+	end
 	
 	def extractBody(html_data,uri)
 		msg_debug "#{__method__}()"
@@ -902,8 +915,8 @@ DATA
 		msg_debug "\n=================================== OPF =================================="
 		msg_debug opfData
 		
-		File.open('/home/andrey/Desktop/ncx.xml','w') { |file| file.write(ncxData) }
-		File.open('/home/andrey/Desktop/opf.xml','w') { |file| file.write(opfData) }
+		#File.open('/home/andrey/Desktop/ncx.xml','w') { |file| file.write(ncxData) }
+		#File.open('/home/andrey/Desktop/opf.xml','w') { |file| file.write(opfData) }
 		
 		
 	end
@@ -926,11 +939,11 @@ book = Book.new(
 	],
 	:options => {
 		:depth => 5,
-		:total_pages => 3,
-		:pages_per_level =>1,
+		:total_pages => 30,
+		:pages_per_level =>5,
 		
 		:threads => 1,
-		:links_per_level => 3,
+		:links_per_level => 5,
 		:db_type => 'f',
 	}
 )
