@@ -14,3 +14,6 @@
 - жизнь кодировок
 - вывод ошибок в stderr
 - при ошибке сохранения ссылки всё равно устанавливается статус 'processed'
+-	<meta content="1" name="dtb:1"/><!-- depth -->
+	<meta content="0" name="dtb:1"/><!-- pages count -->
+	<meta content="0" name="dtb:1"/><!-- max page number -->

@@ -726,8 +726,8 @@ DATA
 	def CreateEpub (bookArray, metadata)
 		msg_info "#{__method__}()"
 		
-		puts "\n=================================== bookArray =================================="
-		ap bookArray
+		#puts "\n=================================== bookArray =================================="
+		#ap bookArray
 		
 		# arg = { :bookArray, :metadata }
 		def MakeNcx(arg)
@@ -739,6 +739,9 @@ DATA
 				navPoints = ''
 				
 				bookArray.each { |item|
+					puts "===================== item ========================"
+					ap item
+					
 					id = Digest::MD5.hexdigest(item[:id])
 					
 					navPoints += <<NCX
@@ -749,11 +752,19 @@ DATA
 	<content src='#{@text_dir}/#{item[:file_name]}'/>
 NCX
 					
-					navPoints += MakeNavPoint(item[:childs], depth)[:xml_tree] if not item[:childs].empty?
+					depth += 1
+					
+					if not item[:childs].empty? then
+						# Ссылка на страницу-подраздел
+						#item_clone = item.clone
+						#item_clone[:childs] = []
+						#ap item_clone
+						#navPoints += MakeNavPoint([ item_clone ], depth)[:xml_tree]
+							
+						navPoints += MakeNavPoint(item[:childs], depth)[:xml_tree]
+					end
 					
 					navPoints += "</navPoint>\n"
-					
-					depth += 1
 				}
 				
 				return { 
@@ -939,8 +950,8 @@ book = Book.new(
 	],
 	:options => {
 		:depth => 5,
-		:total_pages => 30,
-		:pages_per_level =>5,
+		:total_pages => 3,
+		:pages_per_level =>2,
 		
 		:threads => 1,
 		:links_per_level => 5,
