@@ -739,32 +739,45 @@ DATA
 				navPoints = ''
 				
 				bookArray.each { |item|
-					puts "===================== item ========================"
-					ap item
+					#puts "===================== item ========================"
+					#ap item
 					
 					id = Digest::MD5.hexdigest(item[:id])
 					
-					navPoints += <<NCX
-<navPoint id='#{id}' playOrder='#{depth}'>
-	<navLabel>
-		<text>#{item[:title]}</text>
-	</navLabel>
-	<content src='#{@text_dir}/#{item[:file_name]}'/>
-NCX
-					
-					depth += 1
-					
 					if not item[:childs].empty? then
-						# Ссылка на страницу-подраздел
-						#item_clone = item.clone
-						#item_clone[:childs] = []
-						#ap item_clone
-						#navPoints += MakeNavPoint([ item_clone ], depth)[:xml_tree]
-							
+						
+						dir_id = SecureRandom.uuid
+					
+						navPoints += <<NCX
+<navPoint id='#{dir_id}'>
+	<navLabel>
+		<text>DIR: #{item[:title]}</text>
+	</navLabel>
+
+	<navPoint id='#{id}' playOrder='#{depth}'>
+		<navLabel>
+			<text>#{item[:title]}</text>
+		</navLabel>
+		<content src='#{@text_dir}/#{item[:file_name]}'/>
+	</navPoint>
+NCX
 						navPoints += MakeNavPoint(item[:childs], depth)[:xml_tree]
+						
+						navPoints += <<NCX
+</navPoint>
+NCX
+					else
+						navPoints += <<NCX
+	<navPoint id='#{id}' playOrder='#{depth}'>
+		<navLabel>
+			<text>#{item[:title]}</text>
+		</navLabel>
+		<content src='#{@text_dir}/#{item[:file_name]}'/>
+	</navPoint>
+NCX
 					end
 					
-					navPoints += "</navPoint>\n"
+					depth += 1
 				}
 				
 				return { 
@@ -773,35 +786,9 @@ NCX
 				}
 			end
 
-			
-			def MakeNavPoint2(arg)
-				
-				data = ''
-				
-				case arg[:mode]
-				when 'dir'
-					data += "DIR: #{arg[:tree][:title]}"
-					arg[:mode] = 'item'
-					data += MakeNavPoint2(arg)[:xml_tree]
-				when 'item'
-					data += "ITEM: #{arg[:tree][:title]}"
-					if arg
-					depth = 1
-				else
-					raise "неизвестный режим '#{arg[:mode]}"
-				end
-			end
 
-
-			if bookArray.childs.nil? then
-				nav_data = MakeNavPoint2(:mode=>'item', :tree=>bookArray, :depth=>0)
-			else
-				nav_data = MakeNavPoint2(:mode=>'dir', :tree=>bookArray, :depth=>0)
-			end
-
-
+			nav_data = MakeNavPoint(arg[:bookArray],0)
 			metadata = arg[:metadata]
-
 
 			ncx = <<NCX_DATA
 <?xml version="1.0" encoding="utf-8"?>
