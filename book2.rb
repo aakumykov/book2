@@ -732,7 +732,7 @@ DATA
 		# arg = { :bookArray, :metadata }
 		def MakeNcx(arg)
 			msg_debug "#{__method__}()"
-		
+			
 			# arg = { :bookArray, :depth }
 			def MakeNavPoint(bookArray, depth)
 				
@@ -773,8 +773,35 @@ NCX
 				}
 			end
 
-			data = MakeNavPoint(arg[:bookArray], 0)
+			
+			def MakeNavPoint2(arg)
+				
+				data = ''
+				
+				case arg[:mode]
+				when 'dir'
+					data += "DIR: #{arg[:tree][:title]}"
+					arg[:mode] = 'item'
+					data += MakeNavPoint2(arg)[:xml_tree]
+				when 'item'
+					data += "ITEM: #{arg[:tree][:title]}"
+					if arg
+					depth = 1
+				else
+					raise "неизвестный режим '#{arg[:mode]}"
+				end
+			end
+
+
+			if bookArray.childs.nil? then
+				nav_data = MakeNavPoint2(:mode=>'item', :tree=>bookArray, :depth=>0)
+			else
+				nav_data = MakeNavPoint2(:mode=>'dir', :tree=>bookArray, :depth=>0)
+			end
+
+
 			metadata = arg[:metadata]
+
 
 			ncx = <<NCX_DATA
 <?xml version="1.0" encoding="utf-8"?>
@@ -782,15 +809,15 @@ NCX
 <ncx version="2005-1" xmlns="http://www.daisy.org/z3986/2005/ncx/">
 <head>
 	<meta content="FB2BookID" name="dtb:uid"/>
-	<meta content="1" name="dtb:#{data[:depth]}"/><!-- depth -->
-	<meta content="0" name="dtb:#{data[:depth]}"/><!-- pages count -->
-	<meta content="0" name="dtb:#{data[:depth]}"/><!-- max page number -->
+	<meta content="1" name="dtb:#{nav_data[:depth]}"/><!-- depth -->
+	<meta content="0" name="dtb:#{nav_data[:depth]}"/><!-- pages count -->
+	<meta content="0" name="dtb:#{nav_data[:depth]}"/><!-- max page number -->
 </head>
 <docTitle>
 	<text>#{@metadata[:title]}</text>
 </docTitle>
 <navMap>
-#{data[:xml_tree]}</navMap>
+#{nav_data[:xml_tree]}</navMap>
 </ncx>
 NCX_DATA
 
