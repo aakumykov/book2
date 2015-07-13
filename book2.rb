@@ -751,8 +751,9 @@ DATA
 						navPoints += <<NCX
 <navPoint id='#{dir_id}'>
 	<navLabel>
-		<text>DIR: #{item[:title]}</text>
+		<text>>>: #{item[:title]}</text>
 	</navLabel>
+	<content src='#{@text_dir}/#{item[:file_name]}'/>
 
 	<navPoint id='#{id}' playOrder='#{depth}'>
 		<navLabel>
@@ -822,7 +823,7 @@ NCX_DATA
 				output = ''
 				
 				bookArray.each{ |item|
-					id = Digest::MD5.hexdigest(item[:id])
+					id = 'opf_' + Digest::MD5.hexdigest(item[:id])
 					output += <<MANIFEST
 	<item href='#{@text_dir}/#{item[:file_name]}' id='#{id}'  media-type='application/xhtml+xml' />
 MANIFEST
@@ -839,7 +840,7 @@ MANIFEST
 				output = ''
 
 				bookArray.each { |item|
-					id = Digest::MD5.hexdigest(item[:id])
+					id = 'opf_' + Digest::MD5.hexdigest(item[:id])
 					output += "\n\t<itemref idref='#{id}' />";
 					output += self.makeSpine(item[:childs]) if not item[:childs].empty?
 				}
@@ -964,8 +965,8 @@ book = Book.new(
 	],
 	:options => {
 		:depth => 5,
-		:total_pages => 3,
-		:pages_per_level =>2,
+		:total_pages => 15,
+		:pages_per_level =>3,
 		
 		:threads => 1,
 		:links_per_level => 5,
