@@ -762,6 +762,8 @@ DATA
 		<content src='#{@text_dir}/#{item[:file_name]}'/>
 	</navPoint>
 NCX
+						depth += 1
+						
 						navPoints += MakeNavPoint(item[:childs], depth)[:xml_tree]
 						
 						navPoints += <<NCX
@@ -776,9 +778,8 @@ NCX
 		<content src='#{@text_dir}/#{item[:file_name]}'/>
 	</navPoint>
 NCX
+						depth += 1
 					end
-					
-					depth += 1
 				}
 				
 				return { 
@@ -965,8 +966,8 @@ book = Book.new(
 	],
 	:options => {
 		:depth => 5,
-		:total_pages => 15,
-		:pages_per_level =>3,
+		:total_pages => 3,
+		:pages_per_level =>2,
 		
 		:threads => 1,
 		:links_per_level => 5,
