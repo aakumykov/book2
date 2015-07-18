@@ -751,7 +751,7 @@ DATA
 						navPoints += <<NCX
 <navPoint id='#{dir_id}'>
 	<navLabel>
-		<text>>>: #{item[:title]}</text>
+		<text>>> #{item[:title]}</text>
 	</navLabel>
 	<content src='#{@text_dir}/#{item[:file_name]}'/>
 
