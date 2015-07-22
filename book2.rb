@@ -302,7 +302,7 @@ QWERTY
 			
 			@current_depth += 1 if not freshLinksExists?(@current_depth)
 
-			if depthComplete?(@current_depth) then
+			if levelComplete?(@current_depth) then
 				msg_info_green "на уровне #{@current_depth} обработаны все страницы (#{@options[:pages_per_level]})"
 				@current_depth += 1
 			end
@@ -401,7 +401,7 @@ QWERTY
 		return res
 	end
 
-	def depthComplete?(depth)
+	def levelComplete?(depth)
 		msg_debug "#{__method__}()"
 		
 		q = "SELECT  * FROM #{@table_name} WHERE depth=? AND status='processed' "
@@ -1032,11 +1032,11 @@ book = Book.new(
 	],
 	:options => {
 		:depth => 1,
-		:total_pages => 5,
-		:pages_per_level =>2,
+		:total_pages => 10,
+		:pages_per_level =>5,
 		
 		:threads => 1,
-		:links_per_level => 5,
+		:links_per_level => 15,
 		:db_type => 'f',
 	}
 )
