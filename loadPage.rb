@@ -21,8 +21,7 @@ def loadPage ( uri, redirects_limit=10)
 
 		pattern = Regexp.new(/charset\s*=\s*['"]?(?<charset>[^'"]+)['"]?/i)
 
-		page.encode!('UTF-8',{:replace => '_',:invalid => :replace,:undef => :replace})
-		res = page.match(pattern)
+		res = page.encode('UTF-8',{:replace => '_',:invalid => :replace,:undef => :replace}).match(pattern)
 		page_charset = res[:charset].upcase if not res.nil?
 
 		headers.each_pair { |k,v|
@@ -41,15 +40,22 @@ def loadPage ( uri, redirects_limit=10)
 		#~ }
 	end
 
-	
+
 	raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
 
-	begin uri = URI(uri) rescue uri = URI( URI.escape(uri) ) end
+
+	begin 
+		uri = URI(uri) 
+	rescue 
+		uri = URI( URI.escape(uri) ) 
+	end
+
+
+	data = {}
 
 	Net::HTTP.start(uri.host, uri.port, :use_ssl => uri.scheme == 'https') do |http|
 
   		request = Net::HTTP::Get.new uri.request_uri
-  		#request['User-Agent'] = 'Ruby-1.9.3 /contacts: <aakumykov@yandex.ru>'
   		request['User-Agent'] = 'Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0'
   		
   		response = http.request request
@@ -59,9 +65,9 @@ def loadPage ( uri, redirects_limit=10)
 			location = response['location']
 			puts "перенаправление на '#{location}'"
 			warn "redirected to #{location}"
-			return loadPage(location, redirects_limit - 1)
+			data =  loadPage(location, redirects_limit - 1)
 		when Net::HTTPSuccess then
-			return {
+			data = {
 				:headers => response.to_hash,
 				:page => response.body,
 			}
@@ -69,11 +75,16 @@ def loadPage ( uri, redirects_limit=10)
 			response.value
 		end
 	end
+	
+	
+	charset = detectCharset(data)
+	
+	page = data[:page].encode('UTF-8', charset, { :replace => '_', :invalid => :replace, :undef => :replace })
+	
+	return page
 end
 
 
 ( puts "Usage: ruby #{__FILE__} <URI>"; exit(1) ) if 1 != ARGV.size
 
-data = loadPage ARGV[0]
-
-ap detectCharset data
+puts loadPage(ARGV[0])
