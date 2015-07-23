@@ -2,4 +2,4 @@
 *.sqlite-*
 *.db
 *.log
-
+*.epub

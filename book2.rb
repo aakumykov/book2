@@ -4,6 +4,7 @@
 system 'clear'
 
 require 'rubygems'
+require 'archive/zip'
 require 'open3'
 require 'sqlite3'
 require 'securerandom'
@@ -65,6 +66,41 @@ class String
 	def urlencoded?
 		return true if self.match(/[%0-9ABCDEF]{3,}/i)
 		return false
+	end
+end
+
+class ZipFileGenerator
+	# Initialize with the directory to zip and the location of the output archive.
+	def initialize(inputDir, outputFile)
+		@inputDir = inputDir
+		@outputFile = outputFile
+	end
+	
+	# Zip the input directory.
+	def write()
+		entries = Dir.entries(@inputDir); entries.delete("."); entries.delete("..")
+		io = Zip::File.open(@outputFile, Zip::File::CREATE);
+		writeEntries(entries, "", io)
+		io.close();
+	end
+
+	# A helper method to make the recursion work.
+	private
+
+	def writeEntries(entries, path, io)
+		entries.each { |e|
+			zipFilePath = path == "" ? e : File.join(path, e)
+			diskFilePath = File.join(@inputDir, zipFilePath)
+			puts "Deflating " + diskFilePath
+			
+			if File.directory?(diskFilePath)
+				io.mkdir(zipFilePath)
+				subdir =Dir.entries(diskFilePath); subdir.delete("."); subdir.delete("..")
+				writeEntries(subdir, zipFilePath, io)
+			else
+				io.get_output_stream(zipFilePath) { |f| f.print(File.open(diskFilePath, "rb").read())}
+			end
+		}
 	end
 end
 
@@ -346,12 +382,13 @@ QWERTY
 	end
 	
 	
-	def create(file='')
-		msg_info "#{__method__}(#{file})"
+	def create(outputFile='', bookType = 'epub')
+		msg_info "#{__method__}(#{outputFile})"
 		
 		bookArray = getBookStructure
 		
 		CreateEpub(
+			outputFile,
 			bookArray,
 			{
 				:title=>@title, 
@@ -385,7 +422,9 @@ QWERTY
 			return false
 		end
 		
-		msg_info "============== #{reason} =============="
+		#msg_info "============== #{reason} =============="
+		msg_info "============== подготовка завершена =============="
+		displayStatus
 		return true
 	end
 
@@ -788,8 +827,8 @@ DATA
 	end
 
 
-	def CreateEpub (bookArray, metadata)
-		msg_info "#{__method__}()"
+	def CreateEpub (output_file, bookArray, metadata)
+		msg_info "#{__method__}('#{output_file}')"
 		
 		#puts "\n=================================== bookArray =================================="
 		#ap bookArray
@@ -1007,10 +1046,13 @@ DATA
 		msg_debug "\n=================================== OPF =================================="
 		msg_debug opfData
 		
-		#File.open('/home/andrey/Desktop/ncx.xml','w') { |file| file.write(ncxData) }
-		#File.open('/home/andrey/Desktop/opf.xml','w') { |file| file.write(opfData) }
+		# Перемещаю html-файлы в дерево EPUB
+		Dir.entries(@book_dir).each { |file_name|
+			File.rename(@book_dir + '/' + file_name, oebps_text_dir + '/' + file_name) if file_name.match(/\.html$/)
+		}
 		
-		
+		# Создаю EPUB-файл
+		Archive::Zip.archive(output_file, epub_dir)
 	end
 
 
@@ -1031,12 +1073,12 @@ book = Book.new(
 		#'http://opennet.ru'
 	],
 	:options => {
-		:depth => 1,
-		:total_pages => 10,
+		:depth => 4,
+		:total_pages => 50,
 		:pages_per_level =>5,
 		
 		:threads => 1,
-		:links_per_level => 15,
+		:links_per_level => 10,
 		:db_type => 'f',
 	}
 )
