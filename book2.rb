@@ -1047,12 +1047,12 @@ DATA
 		msg_debug opfData
 		
 		# Перемещаю html-файлы в дерево EPUB
-		Dir.entries(@book_dir).each { |file_name|
-			File.rename(@book_dir + '/' + file_name, oebps_text_dir + '/' + file_name) if file_name.match(/\.html$/)
-		}
+		#~ Dir.entries(@book_dir).each { |file_name|
+			#~ File.rename(@book_dir + '/' + file_name, oebps_text_dir + '/' + file_name) if file_name.match(/\.html$/)
+		#~ }
 		
 		# Создаю EPUB-файл
-		Archive::Zip.archive(output_file, epub_dir)
+		#Archive::Zip.archive(output_file, epub_dir)
 	end
 
 
@@ -1073,8 +1073,8 @@ book = Book.new(
 		#'http://opennet.ru'
 	],
 	:options => {
-		:depth => 4,
-		:total_pages => 50,
+		:depth => 1,
+		:total_pages => 5,
 		:pages_per_level =>5,
 		
 		:threads => 1,
