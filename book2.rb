@@ -4,7 +4,8 @@
 system 'clear'
 
 require 'rubygems'
-require 'archive/zip'
+require 'zip'
+require 'find'
 require 'open3'
 require 'sqlite3'
 require 'securerandom'
@@ -997,6 +998,18 @@ OPF_DATA
 		end
 		
 		
+		def createZipFile(zip_file, source_path)
+			msg_info "#{__method__}(#{zip_file},#{source_path})"
+			Find.find(source_path) do |input_item|
+				Zip::File.open(zip_file, Zip::File::CREATE) do |zipfile|
+					virtual_item = input_item.strip.gsub( source_path, '' ).gsub(/^[\/]*/,'')
+					next if virtual_item.empty?
+					zipfile.add(virtual_item, input_item)
+				end
+			end
+		end
+		
+		
 		# создание дерева каталогов под epub-книгу
 		epub_dir = @book_dir + '/' + 'epub'
 		meta_dir = epub_dir + '/META-INF'
@@ -1047,12 +1060,12 @@ DATA
 		msg_debug opfData
 		
 		# Перемещаю html-файлы в дерево EPUB
-		#~ Dir.entries(@book_dir).each { |file_name|
-			#~ File.rename(@book_dir + '/' + file_name, oebps_text_dir + '/' + file_name) if file_name.match(/\.html$/)
-		#~ }
+		Dir.entries(@book_dir).each { |file_name|
+			File.rename(@book_dir + '/' + file_name, oebps_text_dir + '/' + file_name) if file_name.match(/\.html$/)
+		}
 		
 		# Создаю EPUB-файл
-		#Archive::Zip.archive(output_file, epub_dir)
+		createZipFile( output_file, epub_dir + '/')
 	end
 
 
@@ -1073,8 +1086,8 @@ book = Book.new(
 		#'http://opennet.ru'
 	],
 	:options => {
-		:depth => 1,
-		:total_pages => 5,
+		:depth => 4,
+		:total_pages => 20,
 		:pages_per_level =>5,
 		
 		:threads => 1,
