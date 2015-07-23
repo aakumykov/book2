@@ -1027,8 +1027,8 @@ book = Book.new(
 		:language => 'ru',
 	},
 	:source => [
-		#'https://ru.wikipedia.org/wiki/Самооценка',
-		'http://opennet.ru'
+		'https://ru.wikipedia.org/wiki/Секс',
+		#'http://opennet.ru'
 	],
 	:options => {
 		:depth => 1,
