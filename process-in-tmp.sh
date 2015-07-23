@@ -1,1 +1,0 @@
-rm epub/OEBPS/Text/* -fv; rename 's/html/htm/' *.html; for i in *.htm; do FNAME=`echo $i | cut -d. -f1`; tidy -utf8 -numeric -quiet -asxhtml --drop-proprietary-tags yes --force-output yes --doctype omit $i > $FNAME.html; done; mv *.html epub/OEBPS/Text/ && tree epub && cd epub/ && 7z a -tzip ~/Desktop/book.epub * && cd .. && rm ~/Desktop/book.epub_FILES/ -rf
