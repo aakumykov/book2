@@ -54,7 +54,7 @@ module Msg
 		puts arg.to_s.green + 10.chr
 	end
 	
-	def msg_info_cyan(arg)
+	def msg_cyan(arg)
 		puts arg.to_s.cyan + 10.chr
 	end
 	
@@ -70,40 +70,6 @@ class String
 	end
 end
 
-class ZipFileGenerator
-	# Initialize with the directory to zip and the location of the output archive.
-	def initialize(inputDir, outputFile)
-		@inputDir = inputDir
-		@outputFile = outputFile
-	end
-	
-	# Zip the input directory.
-	def write()
-		entries = Dir.entries(@inputDir); entries.delete("."); entries.delete("..")
-		io = Zip::File.open(@outputFile, Zip::File::CREATE);
-		writeEntries(entries, "", io)
-		io.close();
-	end
-
-	# A helper method to make the recursion work.
-	private
-
-	def writeEntries(entries, path, io)
-		entries.each { |e|
-			zipFilePath = path == "" ? e : File.join(path, e)
-			diskFilePath = File.join(@inputDir, zipFilePath)
-			puts "Deflating " + diskFilePath
-			
-			if File.directory?(diskFilePath)
-				io.mkdir(zipFilePath)
-				subdir =Dir.entries(diskFilePath); subdir.delete("."); subdir.delete("..")
-				writeEntries(subdir, zipFilePath, io)
-			else
-				io.get_output_stream(zipFilePath) { |f| f.print(File.open(diskFilePath, "rb").read())}
-			end
-		}
-	end
-end
 
 class Book
 
@@ -180,10 +146,10 @@ class Book
 
 		# создаю каталоги
 		( Dir.mkdir(@work_dir) if not Dir.exists?(@work_dir) ) \
-		and msg_info_cyan("work_dir: #{@work_dir}")
+		and msg_cyan("work_dir: #{@work_dir}")
 
 		( Dir.mkdir(@book_dir) if not Dir.exists?(@book_dir)  ) \
-		and msg_info_cyan("book_dir: #{@book_dir}")
+		and msg_cyan("book_dir: #{@book_dir}")
 
 		# удаляю старые файлы
 		Dir.new(@book_dir).each { |item| 
@@ -242,31 +208,6 @@ QWERTY
 		@timeout_limit = 60
 	end
 
-	def addSource(uri)
-		msg_info "#{__method__}(#{uri})"
-				
-		id = SecureRandom.uuid
-		link = URI::encode(uri) if not uri.urlencoded?
-		link = URI(link)
-		
-		saveLink(id, 0, 0, link.to_s)
-
-		@filters[link.host] = {
-			'links' => [],
-			'pages' => {}
-		}
-
-		return id
-	end
-	
-	def addFilter(filter)
-		msg_info "#{__method__} for '#{filter.keys.join(', ')}'"
-		
-		@filters.merge!(filter)
-		
-		#msg_debug @filters
-	end
-
 	def prepare()
 		
 		msg_info "#{__method__}()"
@@ -280,13 +221,13 @@ QWERTY
 			# брать порцию ссылок
 			links = getFreshLinks(@current_depth, @options[:threads])
 			
-			# и обрабатывать (в потоках)
+			# и обрабатывать в потоках
 			threads = []
 			
-			links.each { |row|
+			links.each { |lnk|
 
-				source_id = row['id']
-				source_uri = row['uri']
+				source_id = lnk['id']
+				source_uri = lnk['uri']
 				
 				# зарядить нить обработки
 				threads << Thread.new(source_uri) { |uri|
@@ -294,47 +235,34 @@ QWERTY
 					# получишь страницу
 					source_page = loadPage(uri)
 					
-					# выделишь заголовок
-					page_title = extractTitle(source_page)
-					msg_info_green "заголовок: #{page_title}"
-					
-					# обрежешь и сохранишь страницу
-					page_body = extractBody(source_page,source_uri)
-					
-					# скомпонуешь новую html-страницу
-					new_page = composePage(page_title,page_body)
-					
-					# подчистишь и превратишь в xhtml
-					new_page = tidyPage(new_page)
+					new_page = processPage(source_page,uri)
 					
 					# сохранишь страницу
-					savePage({
+					savePage(
 						:id => source_id,
-						:title => page_title,
-						:data => new_page,
-					})
+						:title => new_page[:title],
+						:data => new_page[:data],
+					)
 					
-					# выделишь и сохранишь ссылки
-					new_links = extractLinks(source_page,uri)
-
-					new_links.each { |link|
-						saveLink( 
-							SecureRandom.uuid, 
-							source_id, 
-							@current_depth+1, 
-							link 
-						)
-					}
+					saveLinks(
+						:source_page => source_id,
+						:source_page => source_page,
+						:source_uri => uri,
+					)
 					
-					setLinkStatus(source_id,{:status=>'processed',:title=>page_title})
+					setLinkStatus(
+						:id 	=>	source_id,
+						:title 	=>	new_page[:title],
+						:status =>	'processed',
+					)
 					
 					@page_count += 1
 				}
 			}
-			
+
 			# запустить обработку в нитях
 			threads.each { |thr| thr.join }
-		
+
 			displayStatus
 			
 			@current_depth += 1 if not freshLinksExists?(@current_depth)
@@ -355,7 +283,58 @@ QWERTY
 		end		
 		
 	end
+
+	def create(outputFile='', bookType = 'epub')
+		msg_info "#{__method__}(#{outputFile})"
+		
+		bookArray = getBookStructure
+		
+		CreateEpub(
+			outputFile,
+			bookArray,
+			{
+				:title=>@title, 
+				:author=>@author,
+				:language => @language,
+				:id => @id, 
+				:generator_name => @generator_name,
+				:generator_version => @generator_version,
+			}
+		)
+	end
+
+
+
+	def addSource(uri)
+		msg_info "#{__method__}(#{uri})"
+				
+		id = SecureRandom.uuid
+		link = URI::encode(uri) if not uri.urlencoded?
+		link = URI(link)
+		
+		saveURI(
+			:id => id, 
+			:parent_id => 0, 
+			:depth => 0, 
+			:uri => link.to_s,
+		)
+
+		@filters[link.host] = {
+			'links' => [],
+			'pages' => {}
+		}
+
+		return id
+	end
 	
+	def addFilter(filter)
+		msg_info "#{__method__} for '#{filter.keys.join(', ')}'"
+		
+		@filters.merge!(filter)
+		
+		#msg_debug @filters
+	end
+
 	def getBookStructure
 		msg_debug "#{__method__}()"
 		
@@ -383,26 +362,7 @@ QWERTY
 	end
 	
 	
-	def create(outputFile='', bookType = 'epub')
-		msg_info "#{__method__}(#{outputFile})"
-		
-		bookArray = getBookStructure
-		
-		CreateEpub(
-			outputFile,
-			bookArray,
-			{
-				:title=>@title, 
-				:author=>@author,
-				:language => @language,
-				:id => @id, 
-				:generator_name => @generator_name,
-				:generator_version => @generator_version,
-			}
-		)
-	end
-
-
+	
 	private
 	
 	def prepareComplete?
@@ -537,6 +497,45 @@ QWERTY
 		return page
 	end
 	
+	
+	# === Parameters:
+	# * _source_page_
+	# * _source_uri_
+	# === Returns: 
+	# string
+	def processPage(source_page,source_uri)
+		msg_debug(__method__)
+		
+		page_title = extractTitle(source_page)
+		 msg_info_green "заголовок: #{page_title}"
+		
+		page_body = extractBody(source_page,source_uri)
+
+		new_page = composePage(page_title,page_body)
+
+		new_page = tidyPage(new_page)
+		
+		{
+			:title => page_title,
+			:data => new_page,
+		}
+	end
+	
+	def saveLinks(arg)
+		msg_debug(__method__)
+		
+		new_links = extractLinks(arg[:source_page],arg[:source_uri])
+
+		new_links.each { |lnk|
+			saveURI( 
+				:id => SecureRandom.uuid, 
+				:parent_id => arg[:source_id], 
+				:depth => @current_depth+1, 
+				:uri => lnk,
+			)
+		}
+	end
+	
 	def tidyPage input_file
 		stdin, stdout, stderr = Open3.popen3 "tidy -utf8 -numeric -quiet -asxhtml --drop-proprietary-tags yes --force-output yes --doctype omit #{input_file}"
 		output   = stdout.read.strip
@@ -558,16 +557,16 @@ QWERTY
 		return links
 	end
 	
-	def saveLink(id, parent_id, depth, uri)
-		msg_debug "#{__method__}(#{id}, #{parent_id}, #{depth}, #{uri})"
+	def saveURI(arg)
+		msg_debug "#{__method__}(#{arg[:id]}, #{arg[:parent_id]}, #{arg[:depth]}, #{arg[:uri]})"
 		
-		uri = URI::encode(uri) if not uri.urlencoded?
+		encoded_uri = arg[:uri].urlencoded? ? arg[:uri] : URI::encode(arg[:uri])
 		
 		q_check = "SELECT * FROM #{@table_name} WHERE uri = ?"
-		res = @db.prepare(q_check).execute(uri)
+		res = @db.prepare(q_check).execute(encoded_uri)
 		
 		if res.count > 0 then
-			msg_debug "Дубликат #{uri}"
+			msg_debug "Дубликат #{arg[:uri]}"
 			return false
 		end
 		
@@ -575,11 +574,11 @@ QWERTY
 		
 		begin
 			@db.prepare(q).execute(
-				id,
-				parent_id,
-				depth,
+				arg[:id],
+				arg[:parent_id],
+				arg[:depth],
 				'fresh',
-				uri
+				encoded_uri
 			)
 		rescue
 			msg_error "'#{q}'"
@@ -635,10 +634,10 @@ DATA
 		end
 	end
 	
-	def setLinkStatus(id,options)
-		msg_info "#{__method__}(), #{options[:title]}, #{options[:status]}, #{id}"
+	def setLinkStatus(arg)
+		msg_info "#{__method__}(), #{arg[:title]}, #{arg[:status]}, #{arg[:id]}"
 		
-		q = "UPDATE #{@table_name} SET status='#{options[:status]}', title='#{options[:title]}' WHERE id='#{id}'"
+		q = "UPDATE #{@table_name} SET status='#{arg[:status]}', title='#{arg[:title]}' WHERE id='#{arg[:id]}'"
 		
 		# писать в БД до победного конца (что-то пошли дедлоки)
 		res = nil
@@ -821,10 +820,10 @@ DATA
 	end
 
 	def displayStatus
-		msg_info_blue "====  глубина #{@current_depth}===="
-		msg_info_blue "==== страниц #{@page_count}===="
-		msg_info_blue "==== ошибок #{@errors_count}===="
-		msg_info_blue "==== предупреждений #{@alerts_count}===="
+		msg_info_blue "====  глубина #{@current_depth} ===="
+		msg_info_blue "==== страниц #{@page_count} ===="
+		msg_info_blue "==== ошибок #{@errors_count} ===="
+		msg_info_blue "==== предупреждений #{@alerts_count} ===="
 	end
 
 
@@ -1082,13 +1081,13 @@ book = Book.new(
 		:language => 'ru',
 	},
 	:source => [
-		'https://ru.wikipedia.org/wiki/Секс',
+		'https://ru.wikipedia.org/wiki/Женщина',
 		#'http://opennet.ru'
 	],
 	:options => {
-		:depth => 4,
-		:total_pages => 20,
-		:pages_per_level =>5,
+		:depth => 1,
+		:total_pages => 4,
+		:pages_per_level => 0,
 		
 		:threads => 1,
 		:links_per_level => 10,
