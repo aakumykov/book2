@@ -46,11 +46,11 @@ module Msg
 		File.open(@alert_log,'a') { |file| file.write(arg+10.chr) }
 	end
 	
-	def msg_info_blue(arg)
+	def msg_blue(arg)
 		puts arg.to_s.blue + 10.chr
 	end
 	
-	def msg_info_green(arg)
+	def msg_green(arg)
 		puts arg.to_s.green + 10.chr
 	end
 	
@@ -77,7 +77,6 @@ class Book
 
 	attr_accessor :title, :author, :language
 	
-	# методы первого уровня
 	public
 
 	# настроить
@@ -92,8 +91,8 @@ class Book
 			:language => 'ru',
 		}
 		@options = {
-			:depth => 5,
-			:total_pages => 15,
+			:depth => 2,
+			:total_pages => 10,
 			:pages_per_level =>3,
 			
 			:threads => 1,
@@ -213,15 +212,12 @@ QWERTY
 		msg_info "#{__method__}()"
 		
 		# пока не будет готово
-		#until ( prepareComplete? ) do
 		while ( not prepareComplete? ) do
-				
-			msg_debug "CURRENT: pages #{@page_count}, depth #{@current_depth}"
 			
 			# брать порцию ссылок
 			links = getFreshLinks(@current_depth, @options[:threads])
 			
-			# и обрабатывать в потоках
+			# обрабатывать в потоках
 			threads = []
 			
 			links.each { |lnk|
@@ -268,7 +264,7 @@ QWERTY
 			@current_depth += 1 if not freshLinksExists?(@current_depth)
 
 			if levelComplete?(@current_depth) then
-				msg_info_green "на уровне #{@current_depth} обработаны все страницы (#{@options[:pages_per_level]})"
+				msg_green "на уровне #{@current_depth} обработаны все страницы (#{@options[:pages_per_level]})"
 				@current_depth += 1
 			end
 			
@@ -507,7 +503,7 @@ QWERTY
 		msg_debug(__method__)
 		
 		page_title = extractTitle(source_page)
-		 msg_info_green "заголовок: #{page_title}"
+		 msg_green "заголовок: #{page_title}"
 		
 		page_body = extractBody(source_page,source_uri)
 
@@ -820,10 +816,10 @@ DATA
 	end
 
 	def displayStatus
-		msg_info_blue "====  глубина #{@current_depth} ===="
-		msg_info_blue "==== страниц #{@page_count} ===="
-		msg_info_blue "==== ошибок #{@errors_count} ===="
-		msg_info_blue "==== предупреждений #{@alerts_count} ===="
+		msg_blue "====  глубина #{@current_depth} ===="
+		msg_blue "==== страниц #{@page_count} ===="
+		msg_blue "==== ошибок #{@errors_count} ===="
+		msg_blue "==== предупреждений #{@alerts_count} ===="
 	end
 
 
