@@ -54,9 +54,28 @@ class Plugin2 < PluginSkel
 	end
 end
 
+class Html < PluginSkel
+	def work(data)
+		new_data = Master.plugin('Clear',data)
+		new_data = Master.plugin('Txt',new_data)
+	end
+end
+
+class Txt < PluginSkel
+	def work(data)
+		new_data = "#{data} -*- #{self.class}.#{__method__} -*- #{Master.get_option(:depth)}"
+		Master.plugin('Clear',new_data)
+	end
+end
+
+class Clear < PluginSkel
+	def work(data)
+		"#{data} -*- #{self.class}.#{__method__} -*- #{Master.get_option(:depth)}"
+	end
+end
+
+
 m = Master.new
 puts Master.plugin('Plugin1','initial data')
-#puts Master.plugin('Plugin2','initial data')
-#puts m.plugin('Plugin1','qwerty')
-#puts m.plugin('Plugin2','йцукен')
-puts Master.get_option(:plugin_log).join(',')
+puts Master.plugin('Html','initial data')
+puts "call log: #{Master.get_option(:plugin_log).join(',')}"
