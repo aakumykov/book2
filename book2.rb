@@ -207,6 +207,25 @@ QWERTY
 		@timeout_limit = 60
 	end
 
+	class PluginMaster
+		def initialize
+			puts "#{self.class}.#{__method__}()"
+			@log = []
+		end
+		
+		def info
+			puts @log.join(',')
+		end
+		
+		def call(name,data)
+			puts "#{self.class}.#{__method__}(#{name})"
+			log << name
+			plugin = Object.const_get.new
+			plugin.work(data)
+		end
+	end
+			
+	
 	def prepare()
 		
 		msg_info "#{__method__}()"
@@ -227,6 +246,9 @@ QWERTY
 				
 				# зарядить нить обработки
 				threads << Thread.new(source_uri) { |uri|
+				
+					plugin = PluginMaster.new
+					#plugin.call('qwerty','')
 
 					# получишь страницу
 					source_page = loadPage(uri)
