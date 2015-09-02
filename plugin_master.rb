@@ -12,9 +12,15 @@ class PluginMaster
 		
 		puts "#{self}.#{__method__}('#{name}')"
 		
-		raise new Exception "invalid UUID" if not arg[:uuid].match(/^[abcdef0-9]{8}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{12}$/)
+		raise "invalid UUID (#{uuid})" if not arg[:uuid].match(/^[abcdef0-9]{8}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{12}$/)
 		
-		@@log[uuid] = [] if not @@log.has_key?(uuid)
+		if not @@log.has_key?(uuid) then
+			puts "новый uuid: #{uuid}"
+			@@log[uuid] = []
+		else
+			puts "повторный uuid: #{uuid}"
+		end
+		
 		@@log[uuid] << name
 		
 		begin
@@ -24,41 +30,63 @@ class PluginMaster
 			return data
 		end
 		
-		#plugin.work (arg[:data])
+		plugin.work(
+			:uuid => arg[:uuid],
+			:data => arg[:data],
+		)
 	end
 end
 
 class PluginSkel
+
 end
 
 class Html < PluginSkel
-	def work(data)
-		new_data = "#{data} / #{self.class}.#{__method__}"
-		Master.plugin('Plugin2',new_data)
+	def work(arg)
+		uuid = arg[:uuid]
+		data = arg[:data]
+		
+		data = PluginMaster.call(
+			:name => 'Clear',
+			:data => data,
+			:uuid => uuid,
+		)
+		
+		data = PluginMaster.call(
+			:name => 'StripTags',
+			:data => data,
+			:uuid => uuid
+		)
+	end
+end
+
+class StripTags < PluginSkel
+	def work(arg)
+		uuid = arg[:uuid]
+		data = arg[:data]
+		
+		data = data.gsub(/<\/?[^<>]+>/,'')
 	end
 end
 
 class Text < PluginSkel
-	def work(data)
-		"#{data} / #{self.class}.#{__method__}"
+	def work(arg)
+		uuid = arg[:uuid]
+		data = arg[:data]
 	end
 end
 
 class Clear < PluginSkel
-	def work(data)
-		"#{data} / #{self.class}.#{__method__}"
+	def work(arg)
+		uuid = arg[:uuid]
+		data = arg[:data]
 	end
 end
 
 class URINormalize < PluginSkel
-	def work(data)
+	def work(arg)
+		uuid = arg[:uuid]
+		data = arg[:data]
 		"*NORMALIZED* #{data} *NORMALIZED*"
 	end
 end
-
-
-#~ PluginMaster.call(
-	#~ :uuid => '5df05ea8-dd60-463d-8481-51bd3f7e839d',
-	#~ :name => 'Clear',
-	#~ :data => nil
-#~ )
