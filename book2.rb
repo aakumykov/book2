@@ -19,6 +19,8 @@ require 'colorize'	# must be after 'curl' for right colors
 require 'awesome_print'
 require 'uri'
 
+require './plugin_master.rb'
+
 
 module Msg
 
@@ -207,25 +209,6 @@ QWERTY
 		@timeout_limit = 60
 	end
 
-	class PluginMaster
-		def initialize
-			puts "#{self.class}.#{__method__}()"
-			@log = []
-		end
-		
-		def info
-			puts @log.join(',')
-		end
-		
-		def call(name,data)
-			puts "#{self.class}.#{__method__}(#{name})"
-			log << name
-			plugin = Object.const_get.new
-			plugin.work(data)
-		end
-	end
-			
-	
 	def prepare()
 		
 		msg_info "#{__method__}()"
@@ -247,8 +230,13 @@ QWERTY
 				# зарядить нить обработки
 				threads << Thread.new(source_uri) { |uri|
 				
-					plugin = PluginMaster.new
-					#plugin.call('qwerty','')
+					thread_uuid = SecureRandom.uuid
+					
+					PluginMaster.call(
+						:uuid => thread_uuid,
+						:name => 'Html',
+						:data => source_uri
+					)
 
 					# получишь страницу
 					source_page = loadPage(uri)
@@ -1091,6 +1079,8 @@ end
 
 start_time = Time.now
 
+epub_file = 'test-book.epub'
+File.delete(epub_file) if File.exists?(epub_file)
 
 book = Book.new(
 	:metadata => {
@@ -1104,7 +1094,7 @@ book = Book.new(
 	],
 	:options => {
 		:depth => 1,
-		:total_pages => 4,
+		:total_pages => 2,
 		:pages_per_level => 0,
 		
 		:threads => 1,
