@@ -19,7 +19,7 @@ require 'colorize'	# must be after 'curl' for right colors
 require 'awesome_print'
 require 'uri'
 
-require './plugin_master.rb'
+require './plugins_test.rb'
 
 
 module Msg
@@ -79,6 +79,9 @@ class Book
 
 	attr_accessor :title, :author, :language
 	
+	@@plugin_log = {}
+	
+
 	public
 
 	# настроить
@@ -232,7 +235,7 @@ QWERTY
 				
 					thread_uuid = SecureRandom.uuid
 					
-					PluginMaster.call(
+					Book.plugin(
 						:uuid => thread_uuid,
 						:name => 'Html',
 						:data => source_uri
@@ -309,6 +312,37 @@ QWERTY
 		)
 	end
 
+
+	def self.plugin (arg)
+		uuid = arg[:uuid]
+		name = arg[:name]
+		data = arg[:data]
+		
+		puts "#{self}.#{__method__}('#{name}')"
+		
+		raise "invalid UUID (#{uuid})" if not arg[:uuid].match(/^[abcdef0-9]{8}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{12}$/)
+		
+		if not @@plugin_log.has_key?(uuid) then
+			puts "новый uuid: #{uuid}"
+			@@plugin_log[uuid] = []
+		else
+			puts "повторный uuid: #{uuid}"
+		end
+		
+		@@plugin_log[uuid] << name
+		
+		begin
+			plugin = Object.const_get(name).new
+		rescue
+			puts "There is no plugin '#{name}'".red
+			return data
+		end
+		
+		plugin.work(
+			:uuid => arg[:uuid],
+			:data => arg[:data],
+		)
+	end
 
 
 	def addSource(uri)
