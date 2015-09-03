@@ -19,8 +19,7 @@ require 'colorize'	# must be after 'curl' for right colors
 require 'awesome_print'
 require 'uri'
 
-require './plugins_test.rb'
-
+require './test-plugins.rb'
 
 module Msg
 
@@ -71,7 +70,6 @@ class String
 		return false
 	end
 end
-
 
 class Book
 
@@ -235,9 +233,9 @@ QWERTY
 				
 					thread_uuid = SecureRandom.uuid
 					
-					Book.plugin(
+					source_uri = Book.plugin(
 						:uuid => thread_uuid,
-						:name => 'Html',
+						:name => 'WikipediaPrintable',
 						:data => source_uri
 					)
 

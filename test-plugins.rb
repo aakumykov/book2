@@ -52,3 +52,13 @@ class URINormalize < PluginSkel
 		"*NORMALIZED* #{data} *NORMALIZED*"
 	end
 end
+
+class WikipediaPrintable < PluginSkel
+	def work(arg)
+		uri = URI(arg[:data])
+		title = uri.path.match(%r|/wiki/([^/]+)$|)[1]
+		uri.path = "/w/index.php"
+		uri.query = "title=#{title}&printable=yes"
+		uri.to_s
+	end
+end
