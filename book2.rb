@@ -19,8 +19,6 @@ require 'colorize'	# must be after 'curl' for right colors
 require 'awesome_print'
 require 'uri'
 
-require './test-plugins.rb'
-
 module Msg
 
 	def msg_debug(arg)
