@@ -71,6 +71,9 @@ class String
 	end
 end
 
+class PluginSkel
+end
+
 class Book
 
 	include Msg
@@ -227,6 +230,7 @@ QWERTY
 
 				source_id = lnk['id']
 				source_uri = lnk['uri']
+				initial_uri = source_uri
 				
 				# зарядить нить обработки
 				threads << Thread.new(source_uri) { |uri|
@@ -234,13 +238,22 @@ QWERTY
 					thread_uuid = SecureRandom.uuid
 					
 					source_uri = Book.plugin(
+						:name => 'before_load',
+						:uri => initial_uri,
+						:data => source_uri,
 						:uuid => thread_uuid,
-						:name => 'WikipediaPrintable',
-						:data => source_uri
 					)
+					msg_cyan(source_uri)
 
 					# получишь страницу
 					source_page = loadPage(uri)
+					
+					source_page = Book.plugin(
+						:name => 'after_load',
+						:uri => initial_uri,
+						:data => source_page,
+						:uuid => thread_uuid,
+					)
 					
 					new_page = processPage(source_page,uri)
 					
@@ -311,14 +324,51 @@ QWERTY
 	end
 
 
-	def self.plugin (arg)
-		uuid = arg[:uuid]
-		name = arg[:name]
-		data = arg[:data]
+	def self.plugin(arg)
 		
-		puts "#{self}.#{__method__}('#{name}')"
+		# подготовка и проверки
+		name = arg[:name]
+		uri = arg[:uri]
+		data = arg[:data]
+		uuid = arg[:uuid]
+		
+		raise "invalid plugin name: '#{name}'" if not 'String' == name.class.to_s
+		
+		begin
+			uri = URI::encode(uri) if not uri.urlencoded?
+			uri = URI(uri)
+		rescue
+			raise "invalid URI: #{uri}"
+		end
 		
 		raise "invalid UUID (#{uuid})" if not arg[:uuid].match(/^[abcdef0-9]{8}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{12}$/)
+		
+		puts "#{self}.#{__method__}('#{name}', #{uri}, #{uuid})"
+		
+		# загрузка файла плагина
+		uri = URI(uri)
+		file_name = "./plugins/www/#{uri.host}/#{name.downcase}.rb"
+		puts "plugin file: #{file_name}"
+		
+		begin
+			require file_name
+		rescue => e
+			puts e.message
+			return data
+		end
+		
+		require file_name
+		
+		# создание и регистрация объекта плагина
+		plugin_name = "Plugin_#{name}"
+		puts "plugin name: #{plugin_name}"
+		
+		begin
+			plugin = Object.const_get(plugin_name).new
+		rescue
+			puts "There is no plugin '#{name}'".red
+			return data
+		end
 		
 		if not @@plugin_log.has_key?(uuid) then
 			puts "новый uuid: #{uuid}"
@@ -329,13 +379,7 @@ QWERTY
 		
 		@@plugin_log[uuid] << name
 		
-		begin
-			plugin = Object.const_get(name).new
-		rescue
-			puts "There is no plugin '#{name}'".red
-			return data
-		end
-		
+		# работа плагина
 		plugin.work(
 			:uuid => arg[:uuid],
 			:data => arg[:data],
@@ -1121,13 +1165,13 @@ book = Book.new(
 		:language => 'ru',
 	},
 	:source => [
-		'https://ru.wikipedia.org/wiki/Женщина',
-		#'http://opennet.ru'
+		#'https://ru.wikipedia.org/wiki/Женщина',
+		'http://opennet.ru'
 	],
 	:options => {
 		:depth => 1,
 		:total_pages => 2,
-		:pages_per_level => 0,
+		:pages_per_level => 2,
 		
 		:threads => 1,
 		:links_per_level => 10,
