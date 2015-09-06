@@ -233,27 +233,30 @@ QWERTY
 				
 					thread_uuid = SecureRandom.uuid
 					
-					source_uri = Book.plugin(
-						:name => 'before_load',
-						:uri => initial_uri,
-						:data => source_uri,
-						:uuid => thread_uuid,
-					)
-					Msg.cyan(source_uri)
+					#~ source_uri = Book.plugin(
+						#~ :name => 'before_load',
+						#~ :uri => initial_uri,
+						#~ :data => source_uri,
+						#~ :uuid => thread_uuid,
+					#~ )
+                                        #~ Msg.cyan(source_uri)
 
-					# получишь страницу
-					source_page = loadPage(uri)
-					
 					source_page = Book.plugin(
-						:name => 'after_load',
-						:uri => initial_uri,
-						:data => source_page,
-						:uuid => thread_uuid,
-					)
+                                            :name =>'load_page',
+                                            :uri => 'http://common.plugins',
+                                            :uuid => thread_uuid,
+                                            :data => source_uri,
+                                        )
+					
+					#~ source_page = Book.plugin(
+						#~ :name => 'after_load',
+						#~ :uri => initial_uri,
+						#~ :data => source_page,
+						#~ :uuid => thread_uuid,
+					#~ )
 					
 					new_page = processPage(source_page,uri)
 					
-					# сохранишь страницу
 					savePage(
 						:id => source_id,
 						:title => new_page[:title],
@@ -327,6 +330,8 @@ QWERTY
 		uri = arg[:uri]
 		data = arg[:data]
 		uuid = arg[:uuid]
+    
+                Msg.cyan("#{self}.#{__method__}('#{name}', #{uri}, data size: #{data.size}, #{uuid})")
 		
 		raise "invalid plugin name: '#{name}'" if not 'String' == name.class.to_s
 		
@@ -337,14 +342,12 @@ QWERTY
 			raise "invalid URI: #{uri}"
 		end
 		
-		raise "invalid UUID (#{uuid})" if not arg[:uuid].match(/^[abcdef0-9]{8}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{12}$/)
-		
-		puts "#{self}.#{__method__}('#{name}', #{uri}, #{uuid})"
+		raise "неверный UUID (#{uuid})" if not arg[:uuid].match(/^[abcdef0-9]{8}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{12}$/)
 		
 		# загрузка файла плагина
 		uri = URI(uri)
 		file_name = "./plugins/www/#{uri.host}/#{name.downcase}.rb"
-		puts "plugin file: #{file_name}"
+		puts "файл плагина: #{file_name}"
 		
 		begin
 			require file_name
@@ -357,12 +360,12 @@ QWERTY
 		
 		# создание и регистрация объекта плагина
 		plugin_name = "Plugin_#{name}"
-		puts "plugin name: #{plugin_name}"
+		puts "имя плагина: #{plugin_name}"
 		
 		begin
 			plugin = Object.const_get(plugin_name).new
 		rescue
-			puts "There is no plugin '#{name}'".red
+			Msg.error "плагин '#{name}' не найден"
 			return data
 		end
 		
@@ -499,82 +502,6 @@ QWERTY
 		
 		return res
 	end
-	
-	def loadPage(uri, redirects_limit=10)
-
-		def detectCharset(arg)
-
-			page = arg[:page]
-			headers = arg[:headers].nil? ? {} : arg[:headers]
-
-			page_charset = nil
-			headers_charset = nil
-
-			pattern = Regexp.new(/charset\s*=\s*['"]?(?<charset>[^'"]+)['"]?/i)
-
-			res = page.encode('UTF-8',{:replace => '_',:invalid => :replace,:undef => :replace}).match(pattern)
-			page_charset = res[:charset].upcase if not res.nil?
-
-			headers.each_pair { |k,v|
-				if 'content-type'==k.downcase.strip then
-					res = v.first.downcase.strip.match(pattern)
-					headers_charset = res[:charset].upcase if not res.nil?
-				end
-			}
-
-			return page_charset if headers_charset.nil?
-			return headers_charset
-			
-			#~ return {
-				#~ :headers_charset => headers_charset,
-				#~ :page_charset => page_charset,
-			#~ }
-		end
-
-
-		raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
-
-
-		begin 
-			uri = URI(uri) 
-		rescue 
-			uri = URI( URI.escape(uri) ) 
-		end
-
-
-		data = {}
-
-		Net::HTTP.start(uri.host, uri.port, :use_ssl => uri.scheme == 'https') do |http|
-
-			request = Net::HTTP::Get.new uri.request_uri
-			request['User-Agent'] = 'Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0'
-			
-			response = http.request request
-
-			case response
-			when Net::HTTPRedirection then
-				location = response['location']
-				puts "перенаправление на '#{location}'"
-				warn "redirected to #{location}"
-				data =  loadPage(location, redirects_limit - 1)
-			when Net::HTTPSuccess then
-				data = {
-					:headers => response.to_hash,
-					:page => response.body,
-				}
-			else
-				response.value
-			end
-		end
-		
-		
-		charset = detectCharset(data)
-		
-		page = data[:page].encode('UTF-8', charset, { :replace => '_', :invalid => :replace, :undef => :replace })
-		
-		return page
-	end
-	
 	
 	# === Parameters:
 	# * _source_page_
@@ -1161,12 +1088,12 @@ book = Book.new(
 		:language => 'ru',
 	},
 	:source => [
-		#'https://ru.wikipedia.org/wiki/Женщина',
-		'http://opennet.ru'
+		'https://ru.wikipedia.org/wiki/Кварк',
+		#'http://opennet.ru'
 	],
 	:options => {
 		:depth => 1,
-		:total_pages => 2,
+		:total_pages => 5,
 		:pages_per_level => 2,
 		
 		:threads => 1,

@@ -74,6 +74,10 @@ class Plugin_LoadPage < PluginSkel
   charset = detectCharset(data)
   
   page = data[:page].encode('UTF-8', charset, { :replace => '_', :invalid => :replace, :undef => :replace })
+  
+  Msg.cyan "PAGE CLASS: #{page.class}, PAGE SIZE: #{page.size}"
+  
+  return page
 end
 
 end
