@@ -1,5 +1,5 @@
 
-class Plugin_LoadPage < PluginSkel
+class WwwLoad_Plugin < PluginSkel
 
   def detectCharset(arg)
 
@@ -32,16 +32,15 @@ class Plugin_LoadPage < PluginSkel
 
 
   def work(arg)
-    uri = arg[:uri]
-    redirects_limit = arg[:redirects_limit]
-
+    
+    Msg.cyan("#{self.class}.#{__method__}(#{arg[:data].size>80 ? arg[:data].size : arg[:data]})")
+    
+    redirects_limit = arg[:redirects_limit] || 10		# опасная логика...
     raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
-  
-    begin 
-      uri = URI(uri) 
-    rescue 
-      uri = URI( URI.escape(uri) ) 
-    end
+    
+    uri = arg[:data]
+    uri = URI.escape(uri) if not uri.urlencoded?
+    uri = URI(uri)
 
     data = {}
 
@@ -53,29 +52,27 @@ class Plugin_LoadPage < PluginSkel
       response = http.request request
 
       case response
-      when Net::HTTPRedirection then
-        location = response['location']
-        puts "перенаправление на '#{location}'"
-        warn "redirected to #{location}"
-        data =  self.work(
-            :uri=>location, 
-            :redirects_limit=>(redirects_limit-1)
-        )
-      when Net::HTTPSuccess then
-        data = {
-          :headers => response.to_hash,
-          :page => response.body,
-        }
-      else
-        response.value
+				when Net::HTTPRedirection then
+					location = response['location']
+					puts "перенаправление на '#{location}'"
+					warn "redirected to #{location}"
+					data =  self.work(
+							:uri => location, 
+							:redirects_limit => (redirects_limit-1)
+					)
+				when Net::HTTPSuccess then
+					data = {
+						:headers => response.to_hash,
+						:page => response.body,
+					}
+				else
+					response.value
       end
     }
   
   charset = detectCharset(data)
   
   page = data[:page].encode('UTF-8', charset, { :replace => '_', :invalid => :replace, :undef => :replace })
-  
-  Msg.cyan "PAGE CLASS: #{page.class}, PAGE SIZE: #{page.size}"
   
   return page
 end

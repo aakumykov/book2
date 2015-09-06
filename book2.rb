@@ -20,15 +20,15 @@ require 'awesome_print'
 require 'uri'
 
 class Msg
-        @@alerts_count = 0
-        @@errors_count = 0
+	@@alerts_count = 0
+	@@errors_count = 0
 
-        def self.alerts_count
-                @@alerts_count
-        end
-        def self.errors_count
-                @@errors_count
-        end
+	def self.alerts_count
+					@@alerts_count
+	end
+	def self.errors_count
+					@@errors_count
+	end
 
 
 	def self.debug(arg)
@@ -43,16 +43,16 @@ class Msg
 		@@errors_count += 1
 		arg = arg.to_s
 		puts ("ОШИБКА: " + arg).red + 10.chr
-		File.open(@error_log,'w') if not File.exists?(@error_log)
-		File.open(@error_log,'a') { |file| file.write(arg+10.chr) }
+		#File.open(@@error_log,'w') if not File.exists?(@@error_log)
+		#File.open(@@error_log,'a') { |file| file.write(arg+10.chr) }
 	end
 	
 	def self.alert(arg)
 		@@alerts_count += 1
 		arg = arg.to_s
 		puts ("###: " + arg).yellow + 10.chr
-		File.open(@alert_log,'w') if not File.exists?(@alert_log)
-		File.open(@alert_log,'a') { |file| file.write(arg+10.chr) }
+		#File.open(@@alert_log,'w') if not File.exists?(@alert_log)
+		#File.open(@@alert_log,'a') { |file| file.write(arg+10.chr) }
 	end
 	
 	def self.blue(arg)
@@ -87,7 +87,7 @@ class Book
 	attr_accessor :title, :author, :language
 	
 	@@plugin_log = {}
-	
+	@@core_plugin_classes = ['www','input','output']
 
 	public
 
@@ -145,8 +145,8 @@ class Book
 		@image_dir = 'Images'
 		
 		# файлы журналов
-		@error_log = "errors-#{@@script_name}.log"
-		@alert_log = "alerts-#{@@script_name}.log"
+		#@@error_log = "errors-#{@@script_name}.log"
+		#@@alert_log = "alerts-#{@@script_name}.log"
 		
 		# БД имена
 		@db_name = ('m' == @options[:db_type] ) ? ':memory:' : 'db_' + @@script_name + '.sqlite'
@@ -167,12 +167,6 @@ class Book
 			File.delete "#{@book_dir}/#{item}" if item.match(/\.html/) \
 			and Msg.debug("удалён #{item}")
 		}
-
-		File.delete(@error_log) if File.exists?(@error_log) \
-		and Msg.debug("удалён #{@error_log}")
-		
-		File.delete(@alert_log) if File.exists?(@alert_log) \
-		and Msg.debug("удалён #{@alert_log}")
 		
 		# настраиваю БД
 		table_def = <<QWERTY
@@ -242,19 +236,18 @@ QWERTY
 					thread_uuid = SecureRandom.uuid
 					
 					#~ source_uri = Book.plugin(
-						#~ :name => 'before_load',
+						#~ :name => 'filters/[host]/before_load',
 						#~ :uri => initial_uri,
 						#~ :data => source_uri,
 						#~ :uuid => thread_uuid,
 					#~ )
-                                        #~ Msg.cyan(source_uri)
+          #~ Msg.cyan(source_uri)
 
 					source_page = Book.plugin(
-                                            :name =>'load_page',
-                                            :uri => 'http://common.plugins',
-                                            :uuid => thread_uuid,
-                                            :data => source_uri,
-                                        )
+							:name =>'www/load',
+							:data => source_uri,
+							:uuid => thread_uuid,
+					)
 					
 					#~ source_page = Book.plugin(
 						#~ :name => 'after_load',
@@ -335,61 +328,73 @@ QWERTY
 		
 		# подготовка и проверки
 		name = arg[:name]
-		uri = arg[:uri]
 		data = arg[:data]
 		uuid = arg[:uuid]
     
-                Msg.cyan("#{self}.#{__method__}('#{name}', #{uri}, data size: #{data.size}, #{uuid})")
+    Msg.debug("#{self}.#{__method__}(#{arg})")
 		
-		raise "invalid plugin name: '#{name}'" if not 'String' == name.class.to_s
+		# проверка имени плагина
+		raise "неверное имя плагина: '#{name}'" if not name.match(/^[\w\[\]\/]+$/)
 		
-		begin
-			uri = URI::encode(uri) if not uri.urlencoded?
-			uri = URI(uri)
-		rescue
-			raise "invalid URI: #{uri}"
-		end
-		
+		# проверка UUID
 		raise "неверный UUID (#{uuid})" if not arg[:uuid].match(/^[abcdef0-9]{8}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{12}$/)
 		
+		# проверка URI
+		#~ begin
+			#~ uri = URI::encode(uri) if not uri.urlencoded?
+			#~ uri = URI(uri)
+		#~ rescue
+			#~ raise "invalid URI: #{uri}"
+		#~ end
+		
+		is_core_plugin = @@core_plugin_classes.include?(name.match(/^[\w]+/)[0])
+		
 		# загрузка файла плагина
-		uri = URI(uri)
-		file_name = "./plugins/www/#{uri.host}/#{name.downcase}.rb"
-		puts "файл плагина: #{file_name}"
+		file_name = "./plugins/#{name.downcase}.rb"
+		Msg.debug "файл плагина: #{file_name}"
 		
 		begin
 			require file_name
 		rescue => e
-			puts e.message
-			return data
+			if is_core_plugin then
+				Msg.error e.message
+				exit(1)
+			else
+				Msg.alert e.message
+				return data
+			end
 		end
 		
-		require file_name
-		
 		# создание и регистрация объекта плагина
-		plugin_name = "Plugin_#{name}"
-		puts "имя плагина: #{plugin_name}"
+		plugin_name = "#{name.split('/').map{|x|x.capitalize}.join}_Plugin"
+		Msg.debug "имя плагина: #{plugin_name}"
 		
 		begin
 			plugin = Object.const_get(plugin_name).new
-		rescue
-			Msg.error "плагин '#{name}' не найден"
-			return data
+		rescue => e
+			if is_core_plugin then
+				Msg.error e.message
+				exit(1)
+			else
+				Msg.alert e.message
+				return data
+			end
 		end
 		
+		# регистрация вызова плагина
 		if not @@plugin_log.has_key?(uuid) then
-			puts "новый uuid: #{uuid}"
+			Msg.debug "новый uuid: #{uuid}"
 			@@plugin_log[uuid] = []
 		else
-			puts "повторный uuid: #{uuid}"
+			Msg.debug "повторный uuid: #{uuid}"
 		end
 		
 		@@plugin_log[uuid] << name
 		
 		# работа плагина
 		plugin.work(
-			:uuid => arg[:uuid],
-			:data => arg[:data],
+			:uuid => uuid,
+			:data => data,
 		)
 	end
 
@@ -833,10 +838,10 @@ DATA
 	end
 
 	def displayStatus
-		Msg.blue "====  глубина #{@current_depth} ===="
-		Msg.blue "==== страниц #{@page_count} ===="
-		Msg.blue "==== ошибок #{@errors_count} ===="
-		Msg.blue "==== предупреждений #{@alerts_count} ===="
+		Msg.info "====  глубина #{@current_depth} ===="
+		Msg.info "==== страниц #{@page_count} ===="
+		Msg.info "==== ошибок #{Msg.errors_count} ===="
+		Msg.info "==== предупреждений #{Msg.alerts_count} ===="
 	end
 
 
