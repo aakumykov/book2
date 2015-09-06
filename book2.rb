@@ -20,6 +20,16 @@ require 'awesome_print'
 require 'uri'
 
 class Msg
+        @@alerts_count = 0
+        @@errors_count = 0
+
+        def self.alerts_count
+                @@alerts_count
+        end
+        def self.errors_count
+                @@errors_count
+        end
+
 
 	def self.debug(arg)
 		#puts arg.to_s.white + 10.chr
@@ -30,7 +40,7 @@ class Msg
 	end
 
 	def self.error(arg)
-		@errors_count += 1
+		@@errors_count += 1
 		arg = arg.to_s
 		puts ("ОШИБКА: " + arg).red + 10.chr
 		File.open(@error_log,'w') if not File.exists?(@error_log)
@@ -38,7 +48,7 @@ class Msg
 	end
 	
 	def self.alert(arg)
-		@alerts_count += 1
+		@@alerts_count += 1
 		arg = arg.to_s
 		puts ("###: " + arg).yellow + 10.chr
 		File.open(@alert_log,'w') if not File.exists?(@alert_log)
@@ -200,13 +210,11 @@ QWERTY
 		@page_limit = 0		# 0 (zero) disables this limit
 		@page_limit = @options[:total_pages].to_i if not @options[:total_pages].nil?
 		
-		@errors_count = 0
 		@errors_limit = 100
 		
-		@alerts_count = 0 # только для информации
-		@alerts_limit = 0 # пока не используется
+                @alerts_limit = 0 # пока не используется
 		
-		@timeout_limit = 60
+                @timeout_limit = 60
 	end
 
 	def prepare()
@@ -454,7 +462,7 @@ QWERTY
 		elsif @current_depth > @options[:depth] then
 			reason = "достигнута глубина #{@options[:depth]}"
 		
-		elsif @errors_count > @errors_limit then
+		elsif Msg.errors_count > @errors_limit then
 			reason = "достигнут максимум ошибок (#{@errors_limit})"
 		
 		elsif ( @page_count >= @page_limit) and (0 != @page_limit)  then
