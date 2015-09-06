@@ -19,17 +19,17 @@ require 'colorize'	# must be after 'curl' for right colors
 require 'awesome_print'
 require 'uri'
 
-module Msg
+class Msg
 
-	def msg_debug(arg)
+	def self.debug(arg)
 		#puts arg.to_s.white + 10.chr
 	end
 
-	def msg_info(arg)
+	def self.info(arg)
 		puts arg.to_s + 10.chr
 	end
 
-	def msg_error(arg)
+	def self.error(arg)
 		@errors_count += 1
 		arg = arg.to_s
 		puts ("ОШИБКА: " + arg).red + 10.chr
@@ -37,7 +37,7 @@ module Msg
 		File.open(@error_log,'a') { |file| file.write(arg+10.chr) }
 	end
 	
-	def msg_alert(arg)
+	def self.alert(arg)
 		@alerts_count += 1
 		arg = arg.to_s
 		puts ("###: " + arg).yellow + 10.chr
@@ -45,19 +45,19 @@ module Msg
 		File.open(@alert_log,'a') { |file| file.write(arg+10.chr) }
 	end
 	
-	def msg_blue(arg)
+	def self.blue(arg)
 		puts arg.to_s.blue + 10.chr
 	end
 	
-	def msg_green(arg)
+	def self.green(arg)
 		puts arg.to_s.green + 10.chr
 	end
 	
-	def msg_cyan(arg)
+	def self.cyan(arg)
 		puts arg.to_s.cyan + 10.chr
 	end
 	
-	def msg_ahtung(arg)
+	def self.ahtung(arg)
 		puts arg.to_s.black.on_yellow + 10.chr
 	end
 end
@@ -73,8 +73,6 @@ class PluginSkel
 end
 
 class Book
-
-	include Msg
 
 	attr_accessor :title, :author, :language
 	
@@ -149,22 +147,22 @@ class Book
 
 		# создаю каталоги
 		( Dir.mkdir(@work_dir) if not Dir.exists?(@work_dir) ) \
-		and msg_cyan("work_dir: #{@work_dir}")
+		and Msg.cyan("work_dir: #{@work_dir}")
 
 		( Dir.mkdir(@book_dir) if not Dir.exists?(@book_dir)  ) \
-		and msg_cyan("book_dir: #{@book_dir}")
+		and Msg.cyan("book_dir: #{@book_dir}")
 
 		# удаляю старые файлы
 		Dir.new(@book_dir).each { |item| 
 			File.delete "#{@book_dir}/#{item}" if item.match(/\.html/) \
-			and msg_debug("удалён #{item}")
+			and Msg.debug("удалён #{item}")
 		}
 
 		File.delete(@error_log) if File.exists?(@error_log) \
-		and msg_debug("удалён #{@error_log}")
+		and Msg.debug("удалён #{@error_log}")
 		
 		File.delete(@alert_log) if File.exists?(@alert_log) \
-		and msg_debug("удалён #{@alert_log}")
+		and Msg.debug("удалён #{@alert_log}")
 		
 		# настраиваю БД
 		table_def = <<QWERTY
@@ -213,7 +211,7 @@ QWERTY
 
 	def prepare()
 		
-		msg_info "#{__method__}()"
+		Msg.info "#{__method__}()"
 		
 		# пока не будет готово
 		while ( not prepareComplete? ) do
@@ -241,7 +239,7 @@ QWERTY
 						:data => source_uri,
 						:uuid => thread_uuid,
 					)
-					msg_cyan(source_uri)
+					Msg.cyan(source_uri)
 
 					# получишь страницу
 					source_page = loadPage(uri)
@@ -286,7 +284,7 @@ QWERTY
 			@current_depth += 1 if not freshLinksExists?(@current_depth)
 
 			if levelComplete?(@current_depth) then
-				msg_green "на уровне #{@current_depth} обработаны все страницы (#{@options[:pages_per_level]})"
+				Msg.green "на уровне #{@current_depth} обработаны все страницы (#{@options[:pages_per_level]})"
 				@current_depth += 1
 			end
 			
@@ -303,7 +301,7 @@ QWERTY
 	end
 
 	def create(outputFile='', bookType = 'epub')
-		msg_info "#{__method__}(#{outputFile})"
+		Msg.info "#{__method__}(#{outputFile})"
 		
 		bookArray = getBookStructure
 		
@@ -386,7 +384,7 @@ QWERTY
 
 
 	def addSource(uri)
-		msg_info "#{__method__}(#{uri})"
+		Msg.info "#{__method__}(#{uri})"
 				
 		id = SecureRandom.uuid
 		link = URI::encode(uri) if not uri.urlencoded?
@@ -408,15 +406,15 @@ QWERTY
 	end
 	
 	def addFilter(filter)
-		msg_info "#{__method__} for '#{filter.keys.join(', ')}'"
+		Msg.info "#{__method__} for '#{filter.keys.join(', ')}'"
 		
 		@filters.merge!(filter)
 		
-		#msg_debug @filters
+		#Msg.debug @filters
 	end
 
 	def getBookStructure
-		msg_debug "#{__method__}()"
+		Msg.debug "#{__method__}()"
 		
 		def getTocItems(arg)
 			
@@ -463,26 +461,26 @@ QWERTY
 			return false
 		end
 		
-		#msg_info "============== #{reason} =============="
-		msg_info "============== подготовка завершена =============="
+		#Msg.info "============== #{reason} =============="
+		Msg.info "============== подготовка завершена =============="
 		displayStatus
 		return true
 	end
 
 	def freshLinksExists?(depth)
-		#msg_debug "#{__method__}(#{depth})"
+		#Msg.debug "#{__method__}(#{depth})"
 		
 		q = "SELECT * FROM #{@table_name} WHERE depth='#{depth}' AND status='fresh'"
 		res = @db.execute(q)
 		res = res.count != 0
 		
-		#msg_debug  "#{__method__}(depth #{depth}) ==> #{res}"
+		#Msg.debug  "#{__method__}(depth #{depth}) ==> #{res}"
 		
 		return res
 	end
 
 	def levelComplete?(depth)
-		msg_debug "#{__method__}()"
+		Msg.debug "#{__method__}()"
 		
 		q = "SELECT  * FROM #{@table_name} WHERE depth=? AND status='processed' "
 		
@@ -491,20 +489,20 @@ QWERTY
 		return ( res.count >= @options[:pages_per_level] and 0 != @options[:pages_per_level] )
 	end
 
-	def getFreshLinks ( depth, amount )
-		msg_debug "#{__method__}(#{depth},#{amount})"
+	def getFreshLinks( depth, amount )
+		Msg.debug "#{__method__}(#{depth},#{amount})"
 		
 		q = "SELECT * FROM #{@table_name} WHERE status='fresh' AND depth=#{depth} LIMIT #{amount}"
 		res = @db.execute(q)
 		
-		#res.each { |row| msg_info "#{row['uri']}" }
+		#res.each { |row| Msg.info "#{row['uri']}" }
 		
 		return res
 	end
 	
-	def loadPage ( uri, redirects_limit=10)
+	def loadPage(uri, redirects_limit=10)
 
-		def detectCharset (arg)
+		def detectCharset(arg)
 
 			page = arg[:page]
 			headers = arg[:headers].nil? ? {} : arg[:headers]
@@ -584,10 +582,10 @@ QWERTY
 	# === Returns: 
 	# string
 	def processPage(source_page,source_uri)
-		msg_debug(__method__)
+		Msg.debug(__method__)
 		
 		page_title = extractTitle(source_page)
-		 msg_green "заголовок: #{page_title}"
+		 Msg.green "заголовок: #{page_title}"
 		
 		page_body = extractBody(source_page,source_uri)
 
@@ -602,7 +600,7 @@ QWERTY
 	end
 	
 	def saveLinks(arg)
-		msg_debug(__method__)
+		Msg.debug(__method__)
 		
 		new_links = extractLinks(arg[:source_page],arg[:source_uri])
 
@@ -624,7 +622,7 @@ QWERTY
 	end
 	
 	def extractLinks(html_data,uri,filter='')
-		msg_debug "#{__method__} from page '#{uri}'"
+		Msg.debug "#{__method__} from page '#{uri}'"
 		
 		links = collectLinks(uri,html_data)
 		#puts "collected: #{links.size}"
@@ -638,7 +636,7 @@ QWERTY
 	end
 	
 	def saveURI(arg)
-		msg_debug "#{__method__}(#{arg[:id]}, #{arg[:parent_id]}, #{arg[:depth]}, #{arg[:uri]})"
+		Msg.debug "#{__method__}(#{arg[:id]}, #{arg[:parent_id]}, #{arg[:depth]}, #{arg[:uri]})"
 		
 		encoded_uri = arg[:uri].urlencoded? ? arg[:uri] : URI::encode(arg[:uri])
 		
@@ -646,7 +644,7 @@ QWERTY
 		res = @db.prepare(q_check).execute(encoded_uri)
 		
 		if res.count > 0 then
-			msg_debug "Дубликат #{arg[:uri]}"
+			Msg.debug "Дубликат #{arg[:uri]}"
 			return false
 		end
 		
@@ -661,7 +659,7 @@ QWERTY
 				encoded_uri
 			)
 		rescue
-			msg_error "'#{q}'"
+			Msg.error "'#{q}'"
 		end
 	end
 	
@@ -689,33 +687,33 @@ DATA
 		file_name = arg[:id] + ".html"
 		file_path = @book_dir + "/" + file_name
 		
-		msg_info "#{__method__}('#{title}', '#{file_name}'), data size: #{data.size}"
+		Msg.info "#{__method__}('#{title}', '#{file_name}'), data size: #{data.size}"
 
 		begin
 			File.open(file_path,'w') { |file|
 			file.write(data)
 		}
 		rescue
-			msg_error "запись #{title} в файл #{file_path}"
+			Msg.error "запись #{title} в файл #{file_path}"
 		end
 
 
 		begin
 			@db.prepare("UPDATE #{@table_name} SET file_path=? WHERE id=? ").execute(file_path, id)
 		rescue
-			msg_error "сохранение в БД file_path='#{file_path}') для '#{title}'"
+			Msg.error "сохранение в БД file_path='#{file_path}') для '#{title}'"
 		end
 
 
 		begin
 			@db.prepare("UPDATE #{@table_name} SET file_name=? WHERE id=? ").execute(file_name, id)
 		rescue
-			msg_error "сохранение в БД file_name='#{file_name}' для '#{title}'"
+			Msg.error "сохранение в БД file_name='#{file_name}' для '#{title}'"
 		end
 	end
 	
 	def setLinkStatus(arg)
-		msg_info "#{__method__}(), #{arg[:title]}, #{arg[:status]}, #{arg[:id]}"
+		Msg.info "#{__method__}(), #{arg[:title]}, #{arg[:status]}, #{arg[:id]}"
 		
 		q = "UPDATE #{@table_name} SET status='#{arg[:status]}', title='#{arg[:title]}' WHERE id='#{arg[:id]}'"
 		
@@ -725,7 +723,7 @@ DATA
 			begin
 				res = @db.prepare(q).execute()
 			rescue => e
-				msg_error e.message
+				Msg.error e.message
 			end
 		end
 	end
@@ -733,7 +731,7 @@ DATA
 	
 	# методы второго уровня
 	def getOptions(id)
-		msg_debug "#{__method__}(#{id})"
+		Msg.debug "#{__method__}(#{id})"
 		
 		if @options.has_key?(id) then
 			return @options[id]
@@ -743,13 +741,13 @@ DATA
 	end
 
 	def getFilterFor(uri,mode)
-		msg_debug "#{__method__}(#{uri},'#{mode}')"
+		Msg.debug "#{__method__}(#{uri},'#{mode}')"
 		
 		host = URI(uri).host
 		
 		case mode
 			when 'links'
-				msg_debug "items in filter: #{@filters[host]['links'].size}"
+				Msg.debug "items in filter: #{@filters[host]['links'].size}"
 				
 				return @filters[host]['links']
 
@@ -760,14 +758,14 @@ DATA
 				return '/'
 
 			else
-				msg_error "неизвестный режим '#{mode}'"
+				Msg.error "неизвестный режим '#{mode}'"
 				return nil
 		end
 	end
 
 
 	def collectLinks(uri,page)
-		msg_info "#{__method__}(#{ URI::decode(uri) })"
+		Msg.info "#{__method__}(#{ URI::decode(uri) })"
 
 		base_uri = URI(uri)
 
@@ -802,14 +800,14 @@ DATA
 			begin
 				item = URI::decode(item)
 			rescue
-				msg_alert "кривая ссылка для urldecode: #{item_orig.encode()}"
+				Msg.alert "кривая ссылка для urldecode: #{item_orig.encode()}"
 				next
 			end
 			
 			begin
 				item = URI::encode(item)
 			rescue
-				msg_alert "кривая ссылка для urlencode: #{item_orig.encode()}"
+				Msg.alert "кривая ссылка для urlencode: #{item_orig.encode()}"
 				next
 			end
 						
@@ -826,7 +824,7 @@ DATA
 			begin
 				uri = URI(item)
 			rescue
-				msg_alert "кривая ссылка ВТОРОГО уровня: #{item.encode()}"
+				Msg.alert "кривая ссылка ВТОРОГО уровня: #{item.encode()}"
 				next
 			end
 		
@@ -839,14 +837,14 @@ DATA
 		normalized_links.compact!
 		normalized_links.uniq!
 		
-		msg_debug "raw #{all_links.count} / unique #{normalized_links.count}"
+		Msg.debug "raw #{all_links.count} / unique #{normalized_links.count}"
 		#ap links
 		
 		return normalized_links
 	end
 
 	def filterLinks(links,filter)
-		msg_debug "#{__method__}(input: #{links.size})"
+		Msg.debug "#{__method__}(input: #{links.size})"
 
 		return links if filter.size == 0
 
@@ -868,7 +866,7 @@ DATA
 		}
 		
 		selected_links.uniq!
-		msg_debug "#{__method__}(output: #{selected_links.size})"
+		Msg.debug "#{__method__}(output: #{selected_links.size})"
 		#ap selected_links
 		
 		return selected_links
@@ -882,10 +880,10 @@ DATA
 	end
 	
 	def extractBody(html_data,uri)
-		msg_debug "#{__method__}()"
+		Msg.debug "#{__method__}()"
 		
 		filter = getFilterFor(uri,mode='page')
-		msg_debug("page filter: #{filter}")
+		Msg.debug("page filter: #{filter}")
 		
 		res = Nokogiri::HTML(html_data).xpath(filter).first.to_s
 		
@@ -893,29 +891,29 @@ DATA
 	end
 
 	def extractTitle(html_data)
-		msg_debug("#{__method__}() from " + html_data.size.to_s + "-bytes html")
+		Msg.debug("#{__method__}() from " + html_data.size.to_s + "-bytes html")
 		res = html_data.match(%r|<title[^>]*>(?<title>.*)<\s*/\s*title\s*>|im)
 		return '* нет заголовка *' if res.nil?
 		return res[:title].strip
 	end
 
 	def displayStatus
-		msg_blue "====  глубина #{@current_depth} ===="
-		msg_blue "==== страниц #{@page_count} ===="
-		msg_blue "==== ошибок #{@errors_count} ===="
-		msg_blue "==== предупреждений #{@alerts_count} ===="
+		Msg.blue "====  глубина #{@current_depth} ===="
+		Msg.blue "==== страниц #{@page_count} ===="
+		Msg.blue "==== ошибок #{@errors_count} ===="
+		Msg.blue "==== предупреждений #{@alerts_count} ===="
 	end
 
 
 	def CreateEpub (output_file, bookArray, metadata)
-		msg_info "#{__method__}('#{output_file}')"
+		Msg.info "#{__method__}('#{output_file}')"
 		
 		#puts "\n=================================== bookArray =================================="
 		#ap bookArray
 		
 		# arg = { :bookArray, :metadata }
 		def MakeNcx(arg)
-			msg_debug "#{__method__}()"
+			Msg.debug "#{__method__}()"
 			
 			# arg = { :bookArray, :depth }
 			def MakeNavPoint(bookArray, depth)
@@ -999,11 +997,11 @@ NCX_DATA
 		
 		# arg = { :bookArray, :metadata }
 		def MakeOpf(arg)
-			msg_debug "#{__method__}()"
+			Msg.debug "#{__method__}()"
 			
 			# manifest - опись содержимого
 			def makeManifest(bookArray)
-				msg_debug "#{__method__}()"
+				Msg.debug "#{__method__}()"
 				
 				output = ''
 				
@@ -1020,7 +1018,7 @@ MANIFEST
 			
 			# spine - порядок пролистывания
 			def makeSpine(bookArray)
-				msg_debug "#{__method__}()"
+				Msg.debug "#{__method__}()"
 				
 				output = ''
 
@@ -1035,7 +1033,7 @@ MANIFEST
 			
 			# guide - это семантика файлов
 			def makeGuide(bookArray)
-				msg_debug "#{__method__}()"
+				Msg.debug "#{__method__}()"
 				
 				output = ''
 				
@@ -1078,7 +1076,7 @@ OPF_DATA
 		
 		
 		def createZipFile(zip_file, source_path)
-			msg_info "#{__method__}(#{zip_file},#{source_path})"
+			Msg.info "#{__method__}(#{zip_file},#{source_path})"
 			Find.find(source_path) do |input_item|
 				Zip::File.open(zip_file, Zip::File::CREATE) do |zipfile|
 					virtual_item = input_item.strip.gsub( source_path, '' ).gsub(/^[\/]*/,'')
@@ -1133,10 +1131,10 @@ DATA
 			file.write(opfData)
 		}
 		
-		msg_debug "\n=================================== NCX =================================="
-		msg_debug ncxData
-		msg_debug "\n=================================== OPF =================================="
-		msg_debug opfData
+		Msg.debug "\n=================================== NCX =================================="
+		Msg.debug ncxData
+		Msg.debug "\n=================================== OPF =================================="
+		Msg.debug opfData
 		
 		# Перемещаю html-файлы в дерево EPUB
 		Dir.entries(@book_dir).each { |file_name|
