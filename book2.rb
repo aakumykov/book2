@@ -67,6 +67,10 @@ class Msg
 		puts arg.to_s.cyan + 10.chr
 	end
 	
+	def self.red(arg)
+		puts arg.to_s.red + 10.chr
+	end
+	
 	def self.ahtung(arg)
 		puts arg.to_s.black.on_yellow + 10.chr
 	end
@@ -241,7 +245,7 @@ QWERTY
 						#~ :data => source_uri,
 						#~ :uuid => thread_uuid,
 					#~ )
-          #~ Msg.cyan(source_uri)
+					#~ Msg.cyan(source_uri)
 
 					source_page = Book.plugin(
 							:name =>'www/load',
@@ -265,7 +269,7 @@ QWERTY
 					)
 					
 					saveLinks(
-						:source_page => source_id,
+						:source_id => source_id,
 						:source_page => source_page,
 						:source_uri => uri,
 					)
@@ -540,7 +544,7 @@ QWERTY
 	end
 	
 	def saveLinks(arg)
-		Msg.debug(__method__)
+		Msg.debug("#{arg}")
 		
 		new_links = extractLinks(arg[:source_page],arg[:source_uri])
 
@@ -576,7 +580,7 @@ QWERTY
 	end
 	
 	def saveURI(arg)
-		Msg.debug "#{__method__}(#{arg[:id]}, #{arg[:parent_id]}, #{arg[:depth]}, #{arg[:uri]})"
+		Msg.debug "#{__method__}(#{arg})"
 		
 		encoded_uri = arg[:uri].urlencoded? ? arg[:uri] : URI::encode(arg[:uri])
 		
@@ -1102,12 +1106,13 @@ book = Book.new(
 	},
 	:source => [
 		'https://ru.wikipedia.org/wiki/Кварк',
+		#'https://ru.wikipedia.org/wiki/Нейтрино',
 		#'http://opennet.ru'
 	],
 	:options => {
-		:depth => 1,
+		:depth => 2,
 		:total_pages => 5,
-		:pages_per_level => 2,
+		:pages_per_level => 3,
 		
 		:threads => 1,
 		:links_per_level => 10,
