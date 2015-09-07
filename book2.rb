@@ -387,6 +387,7 @@ QWERTY
 		msg_info "#{__method__}(#{outputFile})"
 		
 		bookArray = getBookStructure
+		ap bookArray
 		
 		CreateEpub(
 			outputFile,
@@ -1087,7 +1088,7 @@ book = Book.new(
 	],
 	:options => {
 		:depth => 4,
-		:total_pages => 20,
+		:total_pages => 10,
 		:pages_per_level =>5,
 		
 		:threads => 1,
