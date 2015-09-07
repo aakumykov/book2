@@ -1,3 +1,4 @@
+# coding: utf-8
 
 class WwwLoad_Plugin < PluginSkel
 
