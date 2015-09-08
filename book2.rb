@@ -239,26 +239,24 @@ QWERTY
 				
 					thread_uuid = SecureRandom.uuid
 					
-					#~ source_uri = Book.plugin(
-						#~ :name => 'filters/[host]/before_load',
-						#~ :uri => initial_uri,
-						#~ :data => source_uri,
-						#~ :uuid => thread_uuid,
-					#~ )
-					#~ Msg.cyan(source_uri)
+					source_uri = Book.plugin(
+						:name => 'www/preload',
+						:data => uri,
+						:uuid => thread_uuid,
+					)
 
 					source_page = Book.plugin(
-							:name =>'www/load',
-							:data => source_uri,
-							:uuid => thread_uuid,
+						:name =>'www/load',
+						:data => source_uri,
+						:uuid => thread_uuid,
 					)
 					
-					#~ source_page = Book.plugin(
-						#~ :name => 'after_load',
-						#~ :uri => initial_uri,
-						#~ :data => source_page,
-						#~ :uuid => thread_uuid,
-					#~ )
+					source_page = Book.plugin(
+						:name => 'www/postload',
+						:data => source_page,
+						:uri => initial_uri,
+						:uuid => thread_uuid,
+					)
 					
 					new_page = processPage(source_page,uri)
 					
@@ -334,6 +332,7 @@ QWERTY
 		name = arg[:name]
 		data = arg[:data]
 		uuid = arg[:uuid]
+		uri = arg[:uri]
     
     Msg.debug("#{self}.#{__method__}(#{arg})")
 		
@@ -399,6 +398,7 @@ QWERTY
 		plugin.work(
 			:uuid => uuid,
 			:data => data,
+			:uri => uri,
 		)
 	end
 
@@ -1106,7 +1106,7 @@ book = Book.new(
 	},
 	:source => [
 		'https://ru.wikipedia.org/wiki/Кварк',
-		#'https://ru.wikipedia.org/wiki/Нейтрино',
+		'https://ru.wikipedia.org/wiki/Нейтрино',
 		#'http://opennet.ru'
 	],
 	:options => {

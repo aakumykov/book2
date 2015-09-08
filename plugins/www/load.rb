@@ -34,7 +34,8 @@ class WwwLoad_Plugin < PluginSkel
 
   def work(arg)
     
-    Msg.cyan("#{self.class}.#{__method__}(#{arg[:data].size>80 ? arg[:data].size : arg[:data]})")
+    #Msg.cyan("#{self.class}.#{__method__}(#{arg[:data].size>80 ? arg[:data].size : arg[:data]})")
+    Msg.cyan "#{self.class}.#{__method__}(#{arg.keys.join(',')})"
     
     redirects_limit = arg[:redirects_limit] || 10		# опасная логика...
     raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
