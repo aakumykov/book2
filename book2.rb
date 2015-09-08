@@ -236,29 +236,11 @@ QWERTY
 				
 				# зарядить нить обработки
 				threads << Thread.new(source_uri) { |uri|
-				
-					thread_uuid = SecureRandom.uuid
-					
-					#~ source_uri = Book.plugin(
-						#~ :name => 'filters/[host]/before_load',
-						#~ :uri => initial_uri,
-						#~ :data => source_uri,
-						#~ :uuid => thread_uuid,
-					#~ )
-					#~ Msg.cyan(source_uri)
 
 					source_page = Book.plugin(
-							:name =>'www/load',
-							:data => source_uri,
-							:uuid => thread_uuid,
+						:name =>'www/load',
+						:data => source_uri,
 					)
-					
-					#~ source_page = Book.plugin(
-						#~ :name => 'after_load',
-						#~ :uri => initial_uri,
-						#~ :data => source_page,
-						#~ :uuid => thread_uuid,
-					#~ )
 					
 					new_page = processPage(source_page,uri)
 					
@@ -333,23 +315,11 @@ QWERTY
 		# подготовка и проверки
 		name = arg[:name]
 		data = arg[:data]
-		uuid = arg[:uuid]
     
-    Msg.debug("#{self}.#{__method__}(#{arg})")
+		Msg.debug("#{self}.#{__method__}(#{arg})")
 		
 		# проверка имени плагина
 		raise "неверное имя плагина: '#{name}'" if not name.match(/^[\w\[\]\/]+$/)
-		
-		# проверка UUID
-		raise "неверный UUID (#{uuid})" if not arg[:uuid].match(/^[abcdef0-9]{8}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{4}-[abcdef0-9]{12}$/)
-		
-		# проверка URI
-		#~ begin
-			#~ uri = URI::encode(uri) if not uri.urlencoded?
-			#~ uri = URI(uri)
-		#~ rescue
-			#~ raise "invalid URI: #{uri}"
-		#~ end
 		
 		is_core_plugin = @@core_plugin_classes.include?(name.match(/^[\w]+/)[0])
 		
@@ -385,19 +355,8 @@ QWERTY
 			end
 		end
 		
-		# регистрация вызова плагина
-		if not @@plugin_log.has_key?(uuid) then
-			Msg.debug "новый uuid: #{uuid}"
-			@@plugin_log[uuid] = []
-		else
-			Msg.debug "повторный uuid: #{uuid}"
-		end
-		
-		@@plugin_log[uuid] << name
-		
 		# работа плагина
 		plugin.work(
-			:uuid => uuid,
 			:data => data,
 		)
 	end
