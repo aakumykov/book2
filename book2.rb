@@ -232,19 +232,23 @@ QWERTY
 
 				source_id = lnk['id']
 				source_uri = lnk['uri']
-				initial_uri = source_uri
 				
 				# зарядить нить обработки
 				threads << Thread.new(source_uri) { |uri|
 
-					source_page = Book.plugin(
-						:name =>'www/load',
-						:data => source_uri,
+					uri = Book.plugin(
+						:name => 'www/preload',
+						:data => uri
 					)
 					
 					source_page = Book.plugin(
-						:name => 'site/filter',
-						:data => source_uri,
+						:name =>'www/load',
+						:data => uri,
+					)
+					
+					source_page = Book.plugin(
+						:name => 'www/postload',
+						:data => uri,
 					)
 					
 					new_page = processPage(source_page,uri)
