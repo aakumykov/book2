@@ -242,6 +242,11 @@ QWERTY
 						:data => source_uri,
 					)
 					
+					source_page = Book.plugin(
+						:name => 'site/filter',
+						:data => source_uri,
+					)
+					
 					new_page = processPage(source_page,uri)
 					
 					savePage(
