@@ -1,4 +1,5 @@
 # coding: utf-8
+
 RULES = {
 	'opennet.ru' => 'opennet_main',
 	'www.opennet.ru' => 'opennet_main_www',

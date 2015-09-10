@@ -1,7 +1,8 @@
 # coding: utf-8
 RULES = {
 	'ru.wikipedia.org' => 'wikipedia_main',
-	'ru.wikipedia.org/wiki/Нейтрино' => 'wikipedia_article'
+	'ru.wikipedia.org/wiki/Нейтрино' => 'wikipedia_article',
+	'ссылка3' => 'действие3',
 }
 
 class PluginSkel; end
