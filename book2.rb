@@ -86,12 +86,34 @@ end
 class PluginSkel
 end
 
+class FilterSkel
+
+	@@rules = {}
+
+	def rules
+		@@rules
+	end
+
+	def getRuleFor(arg)
+		puts "#{self.class}.#{__method__}(#{arg})"
+	end
+
+	alias uri2rule getRuleFor
+
+	def default_rule(arg)
+		puts "#{self.class}.#{__method__}(#{arg})"
+		#Book.plugin(:name => 'www/load', :data => arg[:uri])
+	end
+end
+
 class Book
 
 	attr_accessor :title, :author, :language
 	
 	@@plugin_log = {}
 	@@core_plugin_classes = ['www','input','output']
+
+	@@filters_list = {}
 
 	public
 
@@ -210,9 +232,12 @@ QWERTY
 		
 		@errors_limit = 100
 		
-                @alerts_limit = 0 # пока не используется
+    @alerts_limit = 0 # пока не используется
 		
-                @timeout_limit = 60
+    @timeout_limit = 60
+    
+    
+    collectFilters
 	end
 
 	def prepare()
@@ -849,6 +874,39 @@ DATA
 	end
 
 
+	def collectFilters
+		if @@filters_list.empty? then
+		
+			filters_dir = './plugins/www/filters'
+
+			Dir.entries(filters_dir).each { |item|
+				next if not item.match(/^\w+_filter.rb$/)
+				next if item.match(/default_filter.rb/)
+
+				filter_name = item.gsub(/\.rb$/,'').split('_').map{|n|n.capitalize}.join
+				file_name = filters_dir + '/' + item
+
+				Msg.red("file: #{file_name}, filter_name: #{filter_name}")
+				
+				require file_name
+				
+				filter = Object.const_get(filter_name).new
+				Msg.red(filter.class)
+				
+				filter.rules.each {|filter_pattern,filter_worker|
+					Msg.red(filter_pattern)
+				}
+			}
+		end
+	end
+	
+	#~ def getFilterFor(uri)
+		#~ puts "#{self.class}.#{__method__}(#{uri})"
+	#~ end
+
+	alias uri2filter getFilterFor
+
+
 	def CreateEpub (output_file, bookArray, metadata)
 		Msg.info "#{__method__}('#{output_file}')"
 		
@@ -1111,7 +1169,7 @@ book = Book.new(
 	],
 	:options => {
 		:depth => 2,
-		:total_pages => 5,
+		:total_pages => 1,
 		:pages_per_level => 3,
 		
 		:threads => 1,
