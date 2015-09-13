@@ -901,7 +901,9 @@ DATA
 		end
 		
 		dir = './plugins/www/filters'
-		files = Dir.entries(dir).collect{|item| item if item.match(/^\w+_filter.rb$/)}.compact
+		files = Dir.entries(dir).collect{|item| item if item.match(/^\w+_filter.rb$/)}
+		files.delete('default_filter.rb')
+		files.compact!
 		
 		files.each {|file_name|
 			file_path = dir + '/' + file_name
@@ -917,19 +919,19 @@ DATA
 		}
 	end
 	
-	# def uri2filter(uri)
-	# 	Msg.blue "#{self.class}.#{__method__}(#{uri})"
+	def uri2filter(uri)
+		Msg.blue "#{self.class}.#{__method__}(#{uri})"
 		
-	# 	@@filters_list.each { |pattern,file_name|
+		@@filters_list.each { |pattern,file_path|
 		
-	# 		if uri.match(pattern) then
+			if uri.match(pattern) then
+				filter = file2object(file_path)
+				return filter
+			end
+		}
 		
-	# 			
-				
-	# 			
-				
-	# 	}
-	# end
+		filter = file2object('./plugins/www/filters/default.rb')
+	end
 
 	#alias getFilterFor uri2filter
 
