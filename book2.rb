@@ -232,12 +232,13 @@ QWERTY
 		
 		@errors_limit = 100
 		
-    @alerts_limit = 0 # пока не используется
+		@alerts_limit = 0 # пока не используется
+			
+		@timeout_limit = 60
 		
-    @timeout_limit = 60
-    
-    
-    collectFilters
+		
+		collectFilters
+		ap @@filters_list
 	end
 
 	def prepare()
@@ -875,29 +876,37 @@ DATA
 
 
 	def collectFilters
-		if @@filters_list.empty? then
+		Msg.debug("#{self.class}.#{__method__}()")
+
+		return true if not @@filters_list.empty?
 		
-			filters_dir = './plugins/www/filters'
+		filters_dir = './plugins/www/filters'
 
-			Dir.entries(filters_dir).each { |item|
-				next if not item.match(/^\w+_filter.rb$/)
-				next if item.match(/default_filter.rb/)
+		Dir.entries(filters_dir).each { |file_name|
+			next if not file_name.match(/^\w+_filter.rb$/)
+			next if file_name.match(/default_filter.rb/)
 
-				filter_name = item.gsub(/\.rb$/,'').split('_').map{|n|n.capitalize}.join
-				file_name = filters_dir + '/' + item
+			Msg.debug('-------------------')
 
-				Msg.red("file: #{file_name}, filter_name: #{filter_name}")
-				
-				require file_name
-				
-				filter = Object.const_get(filter_name).new
-				Msg.red(filter.class)
-				
-				filter.rules.each {|filter_pattern,filter_worker|
-					Msg.red(filter_pattern)
-				}
+			filter_name = file_name.gsub(/\.rb$/,'').split('_').map{|n|n.capitalize}.join
+			file_path = filters_dir + '/' + file_name
+
+			Msg.debug("file: #{file_path}, filter_name: #{filter_name}")
+			
+			require file_path
+			
+			filter = Object.const_get(filter_name).new
+			
+			filter.rules.each_key {|filter_pattern|
+				Msg.debug("#{filter_pattern} => #{file_path}")
+
+				if not @@filters_list.key?(filter_pattern) then
+					@@filters_list[filter_pattern] = file_path
+				else
+					Msg.error("дубликат ключа '#{filter_pattern}: присутствует значение '#{@@filters_list[filter_pattern]}', добавляется #{file_path}")
+				end
 			}
-		end
+		}
 	end
 	
 	#~ def getFilterFor(uri)
