@@ -875,45 +875,63 @@ DATA
 	end
 
 
+	def file2object(file_path)
+		file_name = File.basename(file_path)
+		class_name = file_name.gsub(/\.rb$/,'').split('_').map{|n|n.capitalize}.join
+		
+		Msg.debug("#{self.class}.#{__method__}(), path: #{file_path}, name: #{file_name}, class: #{class_name}")
+		
+		begin
+			require file_path
+			obj = Object.const_get(class_name).new
+			return obj
+		rescue => e
+			Msg.error e.message
+			return nil
+		end
+	end
+
+
 	def collectFilters
 		Msg.debug("#{self.class}.#{__method__}()")
 
-		return true if not @@filters_list.empty?
+		if not @@filters_list.empty? then
+			Msg.blue("список фильтров уже составлен")
+			return true
+		end
 		
-		filters_dir = './plugins/www/filters'
+		dir = './plugins/www/filters'
+		files = Dir.entries(dir).collect{|item| item if item.match(/^\w+_filter.rb$/)}.compact
+		
+		files.each {|file_name|
+			file_path = dir + '/' + file_name
+			filter = file2object(file_path)
 
-		Dir.entries(filters_dir).each { |file_name|
-			next if not file_name.match(/^\w+_filter.rb$/)
-			next if file_name.match(/default_filter.rb/)
-
-			Msg.debug('-------------------')
-
-			filter_name = file_name.gsub(/\.rb$/,'').split('_').map{|n|n.capitalize}.join
-			file_path = filters_dir + '/' + file_name
-
-			Msg.debug("file: #{file_path}, filter_name: #{filter_name}")
-			
-			require file_path
-			
-			filter = Object.const_get(filter_name).new
-			
-			filter.rules.each_key {|filter_pattern|
-				Msg.debug("#{filter_pattern} => #{file_path}")
-
-				if not @@filters_list.key?(filter_pattern) then
-					@@filters_list[filter_pattern] = file_path
+			filter.rules.each_key {|pattern|
+				if not @@filters_list.key?(pattern) then
+					@@filters_list[pattern] = file_path
 				else
-					Msg.error("дубликат ключа '#{filter_pattern}: присутствует значение '#{@@filters_list[filter_pattern]}', добавляется #{file_path}")
+					Msg.error("дубликат ключа '#{pattern}: присутствует значение '#{@@filters_list[pattern]}', добавляется #{file_path}")
 				end
 			}
 		}
 	end
 	
-	#~ def getFilterFor(uri)
-		#~ puts "#{self.class}.#{__method__}(#{uri})"
-	#~ end
+	# def uri2filter(uri)
+	# 	Msg.blue "#{self.class}.#{__method__}(#{uri})"
+		
+	# 	@@filters_list.each { |pattern,file_name|
+		
+	# 		if uri.match(pattern) then
+		
+	# 			
+				
+	# 			
+				
+	# 	}
+	# end
 
-	alias uri2filter getFilterFor
+	#alias getFilterFor uri2filter
 
 
 	def CreateEpub (output_file, bookArray, metadata)
