@@ -3,8 +3,8 @@
 class RuWikipediaOrgFilter < FilterSkel
 
 	@@rules = {
-		'https://ru.wikipedia.org/wiki/[\w]+' => 'article',
-		'https://ru.wikipedia.org/w/index.php?title=[\w]+&printable=yes' => 'article_printable',
+		'^https:\/\/ru\.wikipedia\.org\/wiki\/[\w%]+' => 'article',
+		'^https:\/\/ru\.wikipedia\.org\/w\/index\.php\?title=[\w%]+&printable=yes' => 'article_printable',
 	}
 
 	def self.rules

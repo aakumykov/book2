@@ -1,6 +1,6 @@
 # coding: utf-8
 
-class Default_Filter < <FilterSkel
+class DefaultFilter < FilterSkel
 
 	@@rules = {
 		'.+' => 'load_page',

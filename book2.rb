@@ -94,15 +94,19 @@ class FilterSkel
 		@@rules
 	end
 
-	def getRuleFor(arg)
-		puts "#{self.class}.#{__method__}(#{arg})"
+	def uri2rule(uri)
+		Msg.blue("#{self.class}.#{__method__}(#{uri})")
+		@@rules.each {|pattern,rule_name|
+			return rule_name if uri.match(pattern)
+		}
+		# А что, если не найдено?
 	end
 
-	alias uri2rule getRuleFor
-
-	def default_rule(arg)
-		puts "#{self.class}.#{__method__}(#{arg})"
-		#Book.plugin(:name => 'www/load', :data => arg[:uri])
+	def work(uri)
+		#Msg.blue("#{class}.#{__method__}(#{arg})")
+		Msg.blue("#{self.class}.#{__method__}(#{uri})")
+		rule_name = uri2rule(uri)
+		Msg.info("rule_name: #{rule_name}")
 	end
 end
 
@@ -237,8 +241,8 @@ QWERTY
 		@timeout_limit = 60
 		
 		
-		collectFilters
-		ap @@filters_list
+		#collectFilters
+		#ap @@filters_list
 	end
 
 	def prepare()
@@ -264,6 +268,10 @@ QWERTY
 				threads << Thread.new(source_uri) { |uri|
 				
 					thread_uuid = SecureRandom.uuid
+					
+					filter = uri2filter(source_uri)
+					Msg.info("FILTER: #{filter.class}")
+					filter.work(source_uri)
 					
 					#~ source_uri = Book.plugin(
 						#~ :name => 'filters/[host]/before_load',
@@ -879,7 +887,7 @@ DATA
 		file_name = File.basename(file_path)
 		class_name = file_name.gsub(/\.rb$/,'').split('_').map{|n|n.capitalize}.join
 		
-		Msg.debug("#{self.class}.#{__method__}(), path: #{file_path}, name: #{file_name}, class: #{class_name}")
+		Msg.debug("#{self.class}.#{__method__}(), path: #{file_path}, file_name: #{file_name}, class_name: #{class_name}")
 		
 		begin
 			require file_path
@@ -892,45 +900,52 @@ DATA
 	end
 
 
-	def collectFilters
-		Msg.debug("#{self.class}.#{__method__}()")
+	#~ def collectFilters
+		#~ Msg.debug("#{self.class}.#{__method__}()")
 
-		if not @@filters_list.empty? then
-			Msg.blue("список фильтров уже составлен")
-			return true
-		end
+		#~ if not @@filters_list.empty? then
+			#~ Msg.blue("список фильтров уже составлен")
+			#~ return true
+		#~ end
 		
-		dir = './plugins/www/filters'
-		files = Dir.entries(dir).collect{|item| item if item.match(/^\w+_filter.rb$/)}
-		files.delete('default_filter.rb')
-		files.compact!
+		#~ dir = './plugins/www/filters'
+		#~ files = Dir.entries(dir).collect{|item| item if item.match(/^\w+_filter.rb$/)}
+		#~ files.delete('default_filter.rb')
+		#~ files.compact!
 		
-		files.each {|file_name|
-			file_path = dir + '/' + file_name
-			filter = file2object(file_path)
+		#~ files.each {|file_name|
+			#~ file_path = dir + '/' + file_name
+			#~ filter = file2object(file_path)
 
-			filter.rules.each_key {|pattern|
-				if not @@filters_list.key?(pattern) then
-					@@filters_list[pattern] = file_path
-				else
-					Msg.error("дубликат ключа '#{pattern}: присутствует значение '#{@@filters_list[pattern]}', добавляется #{file_path}")
-				end
-			}
-		}
-	end
+			#~ filter.rules.each_key {|pattern|
+				#~ if not @@filters_list.key?(pattern) then
+					#~ @@filters_list[pattern] = file_path
+				#~ else
+					#~ Msg.error("дубликат ключа '#{pattern}: присутствует значение '#{@@filters_list[pattern]}', добавляется #{file_path}")
+				#~ end
+			#~ }
+		#~ }
+	#~ end
 	
 	def uri2filter(uri)
 		Msg.blue "#{self.class}.#{__method__}(#{uri})"
 		
-		@@filters_list.each { |pattern,file_path|
+		filters_dir = './plugins/www/filters'
 		
-			if uri.match(pattern) then
-				filter = file2object(file_path)
-				return filter
-			end
+		Dir.entries(filters_dir).delete_if{|x| not x.match(/^\w+_filter.rb$/) }.each { |file|
+			Msg.debug(file)
+			filter = file2object(filters_dir + '/' + file)
+			filter.rules.each_key {|pattern|
+				if uri.match(pattern) then
+					Msg.info("Свпадение '#{uri}' c '#{pattern}'")
+					return filter
+				else
+					Msg.info("Не соапало '#{pattern}'")
+				end
+			}
 		}
 		
-		filter = file2object('./plugins/www/filters/default.rb')
+		return file2object(filters_dir.+'/default.rb')
 	end
 
 	#alias getFilterFor uri2filter
