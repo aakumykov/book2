@@ -933,16 +933,18 @@ DATA
 		filters_dir = './plugins/www/filters'
 		
 		Dir.entries(filters_dir).delete_if{|x| not x.match(/^\w+_filter.rb$/) }.each { |file|
-			Msg.debug(file)
-			filter = file2object(filters_dir + '/' + file)
-			filter.rules.each_key {|pattern|
-				if uri.match(pattern) then
-					Msg.info("Свпадение '#{uri}' c '#{pattern}'")
-					return filter
-				else
-					Msg.info("Не соапало '#{pattern}'")
-				end
-			}
+				Msg.debug(file)
+		
+				filter = file2object(filters_dir + '/' + file)
+		
+				filter.rules.each_key {|pattern|
+						if uri.match(pattern) then
+							Msg.info("Свпадение '#{uri}' c '#{pattern}'")
+							return filter
+						else
+							Msg.info("Не соапало '#{pattern}'")
+						end
+				}
 		}
 		
 		return file2object(filters_dir.+'/default.rb')
