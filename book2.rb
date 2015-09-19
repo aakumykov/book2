@@ -110,6 +110,20 @@ class FilterSkel
 	end
 end
 
+class DefaultFilter < FilterSkel
+
+	@@rules = {
+		'.+' => 'load_page',
+	}
+	
+	def load_page(arg)
+	end
+	
+	def work(arg)
+	end
+	
+end
+
 class Book
 
 	attr_accessor :title, :author, :language
@@ -947,7 +961,7 @@ DATA
 				}
 		}
 		
-		return file2object(filters_dir.+'/default.rb')
+		return DefaultFilter.new
 	end
 
 	#alias getFilterFor uri2filter
@@ -1209,9 +1223,9 @@ book = Book.new(
 		:language => 'ru',
 	},
 	:source => [
-		#'https://ru.wikipedia.org/wiki/Нейтрино',
+		'https://ru.wikipedia.org/wiki/Теория_струн ',
 		#'http://opennet.ru',
-		'http://www.opennet.ru/opennews/art.shtml?num=42987',
+		#'http://www.opennet.ru/opennews/art.shtml?num=42987',
 	],
 	:options => {
 		:depth => 2,
