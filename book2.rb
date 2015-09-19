@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/usr/bin/ruby
 # coding: utf-8
 
 system 'clear'
@@ -1223,7 +1223,7 @@ book = Book.new(
 		:language => 'ru',
 	},
 	:source => [
-		'https://ru.wikipedia.org/wiki/Теория_струн ',
+		'https://ru.wikipedia.org/wiki/Теория_струн',
 		#'http://opennet.ru',
 		#'http://www.opennet.ru/opennews/art.shtml?num=42987',
 	],
