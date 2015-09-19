@@ -441,17 +441,17 @@ QWERTY
 		Msg.info "#{__method__}(#{uri})"
 				
 		id = SecureRandom.uuid
-		link = URI::encode(uri) if not uri.urlencoded?
-		link = URI(link)
+		uri = URI::encode(uri) if not uri.urlencoded?
+		uri = URI(uri)
 		
 		saveURI(
 			:id => id, 
 			:parent_id => 0, 
 			:depth => 0, 
-			:uri => link.to_s,
+			:uri => uri.to_s,
 		)
 
-		@filters[link.host] = {
+		@filters[uri.host] = {
 			'links' => [],
 			'pages' => {}
 		}
@@ -1207,9 +1207,9 @@ book = Book.new(
 		:language => 'ru',
 	},
 	:source => [
-		'https://ru.wikipedia.org/wiki/Кварк',
 		#'https://ru.wikipedia.org/wiki/Нейтрино',
-		#'http://opennet.ru'
+		#'http://opennet.ru',
+		'http://www.opennet.ru/opennews/art.shtml?num=42987',
 	],
 	:options => {
 		:depth => 2,
