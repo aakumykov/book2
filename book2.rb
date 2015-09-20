@@ -894,7 +894,7 @@ DATA
 		Msg.blue "#{self.class}.#{__method__}(#{uri})"
 		
 		filter = findFilter(uri)
-		Msg.blue "Filter: #{filter.class}"
+		Msg.blue "filter is: #{filter.class}"
 		
 		filter.process(uri: uri)
 	end
