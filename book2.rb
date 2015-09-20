@@ -100,14 +100,17 @@ class FilterSkel
 		@@rules.each {|pattern,rule_name|
 			return rule_name if uri.match(pattern)
 		}
-		# А что, если не найдено?
+		# Что, если не найдено?
+		# Ответ: объект-фильтр ищется по его собственным шаблонам, и, если найден, значит есть шаблон (обработчик).
 	end
 
-	def work(uri)
-		#Msg.blue("#{class}.#{__method__}(#{arg})")
-		Msg.blue("#{self.class}.#{__method__}(#{uri})")
-		rule_name = uri2rule(uri)
-		Msg.info("rule_name: #{rule_name}")
+	def process(arg)
+		Msg.blue "#{self.class}.#{__method__}(#{arg})"
+		rule_name = uri2rule(arg[:uri])
+		#~ self.send(
+			#~ rule_name.to_sym,
+			#~ arg[:data]
+		#~ )
 	end
 end
 
@@ -268,8 +271,10 @@ QWERTY
 				threads << Thread.new(source_uri) { |uri|
 					
 					source_page = filteredLoad(source_uri)
+					Msg.blue("source_page type and size: #{source_id.class}, #{source_page.size}")
 					# объединить это и это в одно
 					pageData = slicePage(source_page,uri)
+					Msg.blue("source_page: #{pageData.class}, #{pageData.keys}")
 					
 					savePage(
 						:id => source_id,
@@ -887,8 +892,11 @@ DATA
 	
 	def filteredLoad(uri)
 		Msg.blue "#{self.class}.#{__method__}(#{uri})"
+		
 		filter = findFilter(uri)
-		#filter.process(uri)
+		Msg.blue "Filter: #{filter.class}"
+		
+		filter.process(uri: uri)
 	end
 	
 	def findFilter(uri)
