@@ -8,11 +8,11 @@ class OpennetRuFilter < FilterSkel
 	}
 
 	def piece_of_news(arg)
-		puts "#{self.class}.#{__method__}(#{arg})"
+		Msg.blue "#{self.class}.#{__method__}(#{arg})"
 	end
 
 	def piece_of_news_with_comments(arg)
-		puts "#{self.class}.#{__method__}(#{arg})"
+		Msg.blue "#{self.class}.#{__method__}(#{arg})"
 	end
 end
 

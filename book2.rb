@@ -19,6 +19,7 @@ require 'colorize'	# must be after 'curl' for right colors
 require 'awesome_print'
 require 'uri'
 
+
 class Msg
 	@@alerts_count = 0
 	@@errors_count = 0
@@ -108,20 +109,6 @@ class FilterSkel
 		rule_name = uri2rule(uri)
 		Msg.info("rule_name: #{rule_name}")
 	end
-end
-
-class DefaultFilter < FilterSkel
-
-	@@rules = {
-		'.+' => 'load_page',
-	}
-	
-	def load_page(arg)
-	end
-	
-	def work(arg)
-	end
-	
 end
 
 class Book
@@ -276,44 +263,18 @@ QWERTY
 
 				source_id = lnk['id']
 				source_uri = lnk['uri']
-				initial_uri = source_uri
 				
 				# зарядить нить обработки
 				threads << Thread.new(source_uri) { |uri|
-				
-					thread_uuid = SecureRandom.uuid
 					
-					filter = uri2filter(source_uri)
-					Msg.info("FILTER: #{filter.class}")
-					filter.work(source_uri)
-					
-					#~ source_uri = Book.plugin(
-						#~ :name => 'filters/[host]/before_load',
-						#~ :uri => initial_uri,
-						#~ :data => source_uri,
-						#~ :uuid => thread_uuid,
-					#~ )
-					#~ Msg.cyan(source_uri)
-
-					source_page = Book.plugin(
-							:name =>'www/load',
-							:data => source_uri,
-							:uuid => thread_uuid,
-					)
-					
-					#~ source_page = Book.plugin(
-						#~ :name => 'after_load',
-						#~ :uri => initial_uri,
-						#~ :data => source_page,
-						#~ :uuid => thread_uuid,
-					#~ )
-					
-					new_page = processPage(source_page,uri)
+					source_page = filteredLoad(source_uri)
+					# объединить это и это в одно
+					pageData = slicePage(source_page,uri)
 					
 					savePage(
 						:id => source_id,
-						:title => new_page[:title],
-						:data => new_page[:data],
+						:title => pageData[:title],
+						:data => pageData[:data],
 					)
 					
 					saveLinks(
@@ -324,7 +285,7 @@ QWERTY
 					
 					setLinkStatus(
 						:id 	=>	source_id,
-						:title 	=>	new_page[:title],
+						:title 	=>	pageData[:title],
 						:status =>	'processed',
 					)
 					
@@ -383,7 +344,7 @@ QWERTY
 		data = arg[:data]
 		uuid = arg[:uuid]
     
-    Msg.debug("#{self}.#{__method__}(#{arg})")
+		Msg.debug("#{self}.#{__method__}(#{arg})")
 		
 		# проверка имени плагина
 		raise "неверное имя плагина: '#{name}'" if not name.match(/^[\w\[\]\/]+$/)
@@ -573,7 +534,7 @@ QWERTY
 	# * _source_uri_
 	# === Returns: 
 	# string
-	def processPage(source_page,source_uri)
+	def slicePage(source_page,source_uri)
 		Msg.debug(__method__)
 		
 		page_title = extractTitle(source_page)
@@ -896,24 +857,6 @@ DATA
 		Msg.info "==== предупреждений #{Msg.alerts_count} ===="
 	end
 
-
-	def file2object(file_path)
-		file_name = File.basename(file_path)
-		class_name = file_name.gsub(/\.rb$/,'').split('_').map{|n|n.capitalize}.join
-		
-		Msg.debug("#{self.class}.#{__method__}(), path: #{file_path}, file_name: #{file_name}, class_name: #{class_name}")
-		
-		begin
-			require file_path
-			obj = Object.const_get(class_name).new
-			return obj
-		rescue => e
-			Msg.error e.message
-			return nil
-		end
-	end
-
-
 	#~ def collectFilters
 		#~ Msg.debug("#{self.class}.#{__method__}()")
 
@@ -941,15 +884,23 @@ DATA
 		#~ }
 	#~ end
 	
-	def uri2filter(uri)
+	
+	def filteredLoad(uri)
+		Msg.blue "#{self.class}.#{__method__}(#{uri})"
+		filter = findFilter(uri)
+		#filter.process(uri)
+	end
+	
+	def findFilter(uri)
 		Msg.blue "#{self.class}.#{__method__}(#{uri})"
 		
-		filters_dir = './plugins/www/filters'
+		filters_dir = './plugins/www/filters/'
+		default_filter = filters_dir + 'default_filter.rb'
 		
-		Dir.entries(filters_dir).delete_if{|x| not x.match(/^\w+_filter.rb$/) }.each { |file|
+		Dir.entries(filters_dir).delete_if{|x| ( not x.match(/^\w+_filter.rb$/) or x.match(/^default_filter\.rb$/) ) }.each { |file|
 				Msg.debug(file)
 		
-				filter = file2object(filters_dir + '/' + file)
+				filter = file2object(filters_dir + file)
 		
 				filter.rules.each_key {|pattern|
 						if uri.match(pattern) then
@@ -961,10 +912,25 @@ DATA
 				}
 		}
 		
-		return DefaultFilter.new
+		file2object(default_filter)
+	end
+	
+	def file2object(file_path)
+		file_name = File.basename(file_path)
+		class_name = file_name.gsub(/\.rb$/,'').split('_').map{|n|n.capitalize}.join
+		
+		Msg.debug("#{self.class}.#{__method__}(), path: #{file_path}, file_name: #{file_name}, class_name: #{class_name}")
+		
+		begin
+			require file_path
+			obj = Object.const_get(class_name).new
+			return obj
+		rescue => e
+			Msg.error e.message
+			return nil
+		end
 	end
 
-	#alias getFilterFor uri2filter
 
 
 	def CreateEpub (output_file, bookArray, metadata)
