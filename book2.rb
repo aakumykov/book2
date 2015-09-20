@@ -107,10 +107,10 @@ class FilterSkel
 	def process(arg)
 		Msg.blue "#{self.class}.#{__method__}(#{arg})"
 		rule_name = uri2rule(arg[:uri])
-		#~ self.send(
-			#~ rule_name.to_sym,
-			#~ arg[:data]
-		#~ )
+		self.send(
+			rule_name.to_sym,
+			{:uri => arg[:uri]}
+		)
 	end
 end
 
