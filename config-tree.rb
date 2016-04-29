@@ -99,62 +99,63 @@ class MatchException < Exception
 end
 
 class DefaultSite_Config
-	def acceptLink?(lnk)
-		#Msg.debug("#{__method__}(#{lnk})")
-
-		rules_set = @link_rules.sort_by{ |k,v| k.length }
-
-		begin
-			rules_set.reverse_each { |pattern,data|
-				if lnk.match(pattern)
-					#Msg.blue("Подходящий набор правил: #{pattern}")
-					check_rules(lnk,data[:accept_link]) 
-				end
-			}
-		rescue MatchException => e
-			begin
-				if lnk.match(pattern)
-					#Msg.blue("Подходящий набор правил: #{pattern}")
-					check_rules(lnk,data[:decline_link]) 
-				end
-			rescue
-				return false
+	
+	def rules_for_uri(uri,rules_type)
+		sorted_rules = @link_rules.sort_by{ |k,v| k.length }
+		
+		sorted_rules.reverse_each { |pattern,rule_set|
+			if uri.match(pattern) then
+				return rule_set.fetch(rules_type,{}).sort_by { |k,v| v.length }
 			end
-			
-			return true
-		end
+		}
+		
+		return {}
+	end
+
+	def acceptLink?(uri)
+		#Msg.debug("#{__method__}(#{lnk})")
+		
+		accept_rules = rules_for_uri(uri,:accept)
+		decline_rules = rules_for_uri(uri,:decline)
+
+		positive = check_rules(uri,accept_rules)
+		negative = check_rules(uri,decline_rules)
+
+		return positive && !negative
+	end
+
+	def check_rules(subject,rule_set)
+		#Msg.debug("Checking rules for '#{link}'")
+
+		rule_set.each { |type,value|
+			case type
+			when :regex
+				return true if check_regex(subject,value)
+			when :name
+				return true if check_rule(subject,rules_subset(value))
+			when :cond_regex
+				if value[:condition] then
+					return true if check_regex(subject,value[:regex])
+				end
+			when :cond_name
+				if value[:condition]
+					return true if check_rule(subject,rules_subset(value[:name]))
+				end
+			end
+		}
 
 		return false
 	end
 
-	def check_rules(link,rules)
-		#Msg.debug("Checking rules for '#{link}'")
-
-		rules.each { |key,value|
-			#Msg.debug("#{key} => #{value}")
-
-			case key
-			when :regex
-				check_regex(link,value)
-			when :name
-				check_rules(link,rules_subset(value))
-			when :cond_regex
-				check_regex(link,value[:regex]) if value[:condition]
-			when :cond_name
-				check_rules(link,rules_subset(value[:name])) if value[:condition]
-			end
-		}
-	end
-
 	def check_regex(string,regexp)
-		#Msg.debug("Checking '#{string}' with regex '#{regexp}'")
-		raise MatchException.new(string) if string.match(regexp)
+		#Msg.debug("#{__method__}('#{string}', '#{regexp}')")
+		string.match(regexp)
 	end
 
 	def rules_subset(name)
 		Msg.debug("Вложенный набор правил '#{name}'")
 
-		@@link_rules.each { |k,v| return v[:accept_link] if v[:name]==name }
+		@@link_rules.each { |k,v| return v[:accept] if v[:name]==name }
 
 		Msg.alert("Набор правил '#{name}' не существует")
 		return []
@@ -202,20 +203,20 @@ class Wikipedia_Config < DefaultSite_Config
 	@@link_rules = {
 		'.*' => {
 		 	name: :all_pages,
-		 	accept_link: {
+		 	accept: {
 				regex: '^https:\/\/ru\.wikipedia\.org\/wiki\/[^#<>\[\]|{}�: ]+$',
 				#regex: '^https:\/\/ru\.wikipedia\.org\/wiki\/[^\/]+$',
 				#name: :service,
 				#cond_regex: { regex: 'Linux', condition:BookConfig.with_linux? },
 				#cond_name: { name: :discussion, condition:BookConfig.with_discussion? },
 			},
-			decline_link: {
+			decline: {
 				regex: 'ru\.wikipedia\.org\/wiki\/Заглавная_страница$'
 			},
 		},
 		'/Обсуждение:[^:]+$' => {
 			name: :discussion,
-			accept_link: {
+			accept: {
 				regex: '.*'
 			}
 		}
@@ -255,6 +256,6 @@ hrefs.each { |uri|
 	if site_config.acceptLink?(uri)
 		Msg.green( site_config.humanize_link(uri))
 	else
-		#Msg.red(uri)
+		Msg.red(uri)
 	end
 }
