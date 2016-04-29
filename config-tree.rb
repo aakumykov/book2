@@ -114,12 +114,17 @@ class DefaultSite_Config
 
 	def acceptLink?(uri)
 		#Msg.debug("#{__method__}(#{lnk})")
+
+		uri = URI.smart_decode(uri)
+		#Msg.debug(uri)
 		
 		accept_rules = rules_for_uri(uri,:accept)
 		decline_rules = rules_for_uri(uri,:decline)
 
 		positive = check_rules(uri,accept_rules)
 		negative = check_rules(uri,decline_rules)
+
+		Msg.blue("positive: #{positive}, negative: #{negative}, ИТОГ: #{positive && !negative}")
 
 		return positive && !negative
 	end
@@ -130,7 +135,10 @@ class DefaultSite_Config
 		rule_set.each { |type,value|
 			case type
 			when :regex
-				return true if check_regex(subject,value)
+				if check_regex(subject,value)
+					#Msg.debug("совпало: #{value}")
+					return true
+				end
 			when :name
 				return true if check_rule(subject,rules_subset(value))
 			when :cond_regex
@@ -148,7 +156,7 @@ class DefaultSite_Config
 	end
 
 	def check_regex(string,regexp)
-		#Msg.debug("#{__method__}('#{string}', '#{regexp}')")
+		Msg.debug("#{__method__}('#{string}', '#{regexp}')")
 		string.match(regexp)
 	end
 
@@ -212,7 +220,8 @@ class Wikipedia_Config < DefaultSite_Config
 				#cond_name: { name: :discussion, condition:BookConfig.with_discussion? },
 			},
 			decline: {
-				regex: 'ru\.wikipedia\.org\/wiki\/Заглавная_страница$'
+				regex: 'ru\.wikipedia\.org\/wiki\/Заглавная_страница$',
+				#regex: '.*',
 			},
 		},
 		'/Обсуждение:[^:]+$' => {
@@ -253,10 +262,11 @@ hrefs.each { |uri|
 	uri = uri.match(/href\s*=\s*['"](?<the_uri>[^'"]+)['"]/)[:the_uri].strip
 	
 	uri = site_config.repair_uri(uri)
+	Msg.red("Проверяю ссылку: #{uri}")
 
 	if site_config.acceptLink?(uri)
 		Msg.green( site_config.humanize_link(uri))
 	else
-		Msg.red(uri)
+		#Msg.red(uri)
 	end
 }
