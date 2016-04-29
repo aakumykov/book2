@@ -166,14 +166,15 @@ class DefaultSite_Config
 		#Msg.blue("urlencoded?: #{uri.urlencoded?}")
 		#Msg.blue("latin1?: #{uri.latin1?}")
 		
-		uri = URI( URI.smart_encode(uri) )
-		
-		#Msg.blue("URIed uri: #{uri}")
-		
-		uri.scheme = @config[:scheme] if uri.scheme.to_s.empty?
-		uri.host = @config[:host] if uri.host.to_s.empty?
-		uri.path = @config[:path] if uri.path.to_s.empty?
-		uri.query = @config[:query] if uri.query.to_s.empty?
+		uri = URI( URI.smart_encode(uri.strip) )
+
+		if uri.to_s.match(/^\//)
+			#Msg.blue("URIed uri: #{uri}")
+			uri.scheme = @config[:scheme] if uri.scheme.to_s.empty?
+			uri.host = @config[:host] if uri.host.to_s.empty?
+			uri.path = @config[:path] if uri.path.to_s.empty?
+			uri.query = @config[:query] if uri.query.to_s.empty?
+		end
 		
 		#Msg.blue("path: #{uri.path}")
 		#Msg.blue("восстановленный uri: #{uri.to_s}")
