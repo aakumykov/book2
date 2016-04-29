@@ -100,31 +100,24 @@ end
 
 class DefaultSite_Config
 	
-	def rules_for_uri(uri,rules_type)
-		sorted_rules = @link_rules.sort_by{ |k,v| k.length }
-		
-		sorted_rules.reverse_each { |pattern,rule_set|
-			if uri.match(pattern) then
-				return rule_set.fetch(rules_type,{}).sort_by { |k,v| v.length }
-			end
+	def get_rules_for_uri(uri)
+		@link_rules.sort_by{ |k,v| k.length }.reverse_each { |pattern,rule_set|
+			return rule_set if uri.match(pattern)
 		}
-		
 		return {}
 	end
 
 	def acceptLink?(uri)
-		#Msg.debug("#{__method__}(#{lnk})")
+		#Msg.debug("#{__method__}(#{uri})")
 
 		uri = URI.smart_decode(uri)
-		#Msg.debug(uri)
 		
-		accept_rules = rules_for_uri(uri,:accept)
-		decline_rules = rules_for_uri(uri,:decline)
+		#Msg.debug(uri)
 
-		positive = check_rules(uri,accept_rules)
-		negative = check_rules(uri,decline_rules)
+		positive = check_rules(uri,@current_rules[:accept])
+		negative = check_rules(uri,@current_rules[:decline])
 
-		Msg.blue("positive: #{positive}, negative: #{negative}, ИТОГ: #{positive && !negative}")
+		Msg.debug("positive: #{positive}, negative: #{negative}, ИТОГ: #{positive && !negative}")
 
 		return positive && !negative
 	end
@@ -156,7 +149,7 @@ class DefaultSite_Config
 	end
 
 	def check_regex(string,regexp)
-		Msg.debug("#{__method__}('#{string}', '#{regexp}')")
+		#Msg.debug("#{__method__}('#{string}', '#{regexp}')")
 		string.match(regexp)
 	end
 
@@ -232,9 +225,12 @@ class Wikipedia_Config < DefaultSite_Config
 		}
 	}
 
+	#attr_reader :current_rules
+
 	def initialize(start_lnk)
 		@config = @@config
 		@link_rules = @@link_rules
+		@current_rules = get_rules_for_uri(start_lnk)
 		
 		uri = URI(URI.encode(start_lnk))
 		  @config[:path] = uri.path
@@ -253,16 +249,21 @@ else
 	exit false
 end
 
-site_config = Wikipedia_Config.new(input_link)
-#site_config.repair_uri(input_link); exit
+Msg.red("ССЫЛКА: #{input_link}")
+Msg.red("ФАЙЛ: #{input_file}")
 
-data = File.read(input_file)
-hrefs = data.scan(/href\s*=\s*['"][^'"]+['"]/)
-hrefs.each { |uri|
+site_config = Wikipedia_Config.new(input_link)
+
+
+File.read(input_file).scan(/href\s*=\s*['"][^'"]+['"]/).each { |uri|
+	
 	uri = uri.match(/href\s*=\s*['"](?<the_uri>[^'"]+)['"]/)[:the_uri].strip
 	
 	uri = site_config.repair_uri(uri)
-	Msg.red("Проверяю ссылку: #{uri}")
+	#uri = site_config.humanize_link
+
+	Msg.debug("Проверяю ссылку: #{uri}")
+	#Msg.red("Проверяю ссылку: #{site_config.humanize_link(uri)}")
 
 	if site_config.acceptLink?(uri)
 		Msg.green( site_config.humanize_link(uri))
