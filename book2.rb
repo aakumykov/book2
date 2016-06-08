@@ -19,6 +19,7 @@ require 'colorize'	# must be after 'curl' for right colors
 require 'awesome_print'
 require 'uri'
 
+
 class Msg
 	@@alerts_count = 0
 	@@errors_count = 0
